@@ -96,6 +96,17 @@ Here's the Claude Desktop configuration to use the Playwright server:
 }
 ```
 
+# Proxy Configuration
+
+mcp-playwright now supports proxy configuration for browsers. You can use a proxy to:
+- Access websites through a proxy server
+- Authenticate with proxies that require a username/password
+- Use a proxy to bypass network restrictions
+
+## How to Use a Proxy
+
+To use a proxy, add the `proxy` parameter to the `playwright_navigate` tool:
+
 ## Testing
 
 This project uses Jest for testing. The tests are located in the `src/__tests__` directory.

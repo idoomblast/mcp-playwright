@@ -87,7 +87,19 @@ export function createToolDefinitions() {
           height: { type: "number", description: "Viewport height in pixels (default: 720)" },
           timeout: { type: "number", description: "Navigation timeout in milliseconds" },
           waitUntil: { type: "string", description: "Navigation wait condition" },
-          headless: { type: "boolean", description: "Run browser in headless mode (default: false)" }
+          headless: { type: "boolean", description: "Run browser in headless mode (default: false)" },
+                acceptInsecureCerts: { type: "boolean", description: "Accept insecure/self-signed certificates (default: true)" },
+      ignoreHTTPSErrors: { type: "boolean", description: "Ignore HTTPS errors (default: true)" },
+          proxy: {
+            type: "object",
+            description: "Proxy configuration for browser",
+            properties: {
+              server: { type: "string", description: "Proxy server URL (e.g., http://proxy.server:8080)" },
+              username: { type: "string", description: "Username for proxy authentication (optional)" },
+              password: { type: "string", description: "Password for proxy authentication (optional)" }
+            },
+            required: ["server"]
+          }
         },
         required: ["url"],
       },

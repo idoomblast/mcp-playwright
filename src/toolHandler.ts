@@ -110,6 +110,13 @@ interface BrowserSettings {
   userAgent?: string;
   headless?: boolean;
   browserType?: 'chromium' | 'firefox' | 'webkit';
+  proxy?: {
+    server: string;
+    username?: string;
+    password?: string;
+  };
+  acceptInsecureCerts?: boolean;
+  ignoreHTTPSErrors?: boolean;
 }
 
 async function registerConsoleMessage(page) {
@@ -171,7 +178,7 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
 
     // Launch new browser if needed
     if (!browser) {
-      const { viewport, userAgent, headless = false, browserType = 'chromium' } = browserSettings ?? {};
+      const { viewport, userAgent, headless = false, browserType = 'chromium', proxy, acceptInsecureCerts = true, ignoreHTTPSErrors = true } = browserSettings ?? {};
       
       // If browser type is changing, force a new browser instance
       if (browser && currentBrowserType !== browserType) {
@@ -204,7 +211,9 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
 
       browser = await browserInstance.launch({
         headless,
-        executablePath: executablePath
+        executablePath: executablePath,
+        ...(proxy && { proxy }),
+        ...(acceptInsecureCerts && { acceptInsecureCerts })
       });
       
       currentBrowserType = browserType;
@@ -223,6 +232,7 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
           height: viewport?.height ?? 720,
         },
         deviceScaleFactor: 1,
+        ignoreHTTPSErrors: ignoreHTTPSErrors,
       });
 
       page = await context.newPage();
@@ -257,7 +267,7 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
     resetBrowserState();
     
     // Try one more time from scratch
-    const { viewport, userAgent, headless = false, browserType = 'chromium' } = browserSettings ?? {};
+    const { viewport, userAgent, headless = false, browserType = 'chromium', proxy, acceptInsecureCerts = true, ignoreHTTPSErrors = true } = browserSettings ?? {};
     
     // Use the appropriate browser engine
     let browserInstance;
@@ -274,7 +284,11 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
         break;
     }
     
-    browser = await browserInstance.launch({ headless });
+    browser = await browserInstance.launch({ 
+      headless,
+      ...(proxy && { proxy }),
+      ...(acceptInsecureCerts && { acceptInsecureCerts })
+    });
     currentBrowserType = browserType;
     
     browser.on('disconnected', () => {
@@ -290,6 +304,7 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
         height: viewport?.height ?? 720,
       },
       deviceScaleFactor: 1,
+      ignoreHTTPSErrors: ignoreHTTPSErrors,
     });
 
     page = await context.newPage();
@@ -433,7 +448,10 @@ export async function handleToolCall(
       },
       userAgent: name === "playwright_custom_user_agent" ? args.userAgent : undefined,
       headless: args.headless,
-      browserType: args.browserType || 'chromium'
+      browserType: args.browserType || 'chromium',
+      proxy: args.proxy,
+      acceptInsecureCerts: args.acceptInsecureCerts,
+      ignoreHTTPSErrors: args.ignoreHTTPSErrors
     };
     
     try {
