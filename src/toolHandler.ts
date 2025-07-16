@@ -15,6 +15,7 @@ import {
   NavigationTool,
   CloseBrowserTool,
   ConsoleLogsTool,
+  NetworkInspectionTool,
   ExpectResponseTool,
   AssertResponseTool,
   CustomUserAgentTool
@@ -73,6 +74,7 @@ let screenshotTool: ScreenshotTool;
 let navigationTool: NavigationTool;
 let closeBrowserTool: CloseBrowserTool;
 let consoleLogsTool: ConsoleLogsTool;
+let networkInspectionTool: NetworkInspectionTool;
 let clickTool: ClickTool;
 let iframeClickTool: IframeClickTool;
 let iframeFillTool: IframeFillTool;
@@ -158,6 +160,11 @@ async function registerConsoleMessage(page) {
       console.error(`[Playwright][Unhandled Rejection In Promise] ${message}\n${stack}`);
     });
   });
+
+  // Register network monitoring if networkInspectionTool is available
+  if (networkInspectionTool) {
+    networkInspectionTool.registerNetworkListeners(page);
+  }
 }
 
 /**
@@ -388,6 +395,7 @@ function initializeTools(server: any) {
   if (!navigationTool) navigationTool = new NavigationTool(server);
   if (!closeBrowserTool) closeBrowserTool = new CloseBrowserTool(server);
   if (!consoleLogsTool) consoleLogsTool = new ConsoleLogsTool(server);
+  if (!networkInspectionTool) networkInspectionTool = new NetworkInspectionTool(server);
   if (!clickTool) clickTool = new ClickTool(server);
   if (!iframeClickTool) iframeClickTool = new IframeClickTool(server);
   if (!iframeFillTool) iframeFillTool = new IframeFillTool(server);
@@ -554,6 +562,9 @@ export async function handleToolCall(
         
       case "playwright_console_logs":
         return await consoleLogsTool.execute(args, context);
+        
+      case "playwright_network_inspection":
+        return await networkInspectionTool.execute(args, context);
         
       case "playwright_click":
         return await clickTool.execute(args, context);

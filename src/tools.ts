@@ -245,6 +245,60 @@ export function createToolDefinitions() {
       },
     },
     {
+      name: "playwright_network_inspection",
+      description: "Monitor and inspect network traffic in the browser",
+      inputSchema: {
+        type: "object",
+        properties: {
+          action: {
+            type: "string",
+            description: "Action to perform (start, stop, get, clear)",
+            enum: ["start", "stop", "get", "clear"]
+          },
+          filter: {
+            type: "object",
+            description: "Filter criteria for network entries",
+            properties: {
+              method: {
+                type: "string",
+                description: "Filter by HTTP method (GET, POST, PUT, DELETE, etc.)"
+              },
+              url: {
+                type: "string",
+                description: "Filter by URL pattern (partial match)"
+              },
+              status: {
+                type: "number",
+                description: "Filter by HTTP status code"
+              },
+              resourceType: {
+                type: "string",
+                description: "Filter by resource type (document, stylesheet, script, xhr, fetch, etc.)"
+              },
+              minDuration: {
+                type: "number",
+                description: "Filter by minimum request duration in milliseconds"
+              }
+            }
+          },
+          limit: {
+            type: "number",
+            description: "Maximum number of network entries to return (default: 50)"
+          },
+          clear: {
+            type: "boolean",
+            description: "Whether to clear network entries after retrieval (default: false)"
+          },
+          format: {
+            type: "string",
+            description: "Output format (summary or detailed)",
+            enum: ["summary", "detailed"]
+          }
+        },
+        required: [],
+      },
+    },
+    {
       name: "playwright_close",
       description: "Close the browser and release all resources",
       inputSchema: {
@@ -471,6 +525,8 @@ export const BROWSER_TOOLS = [
   "playwright_hover",
   "playwright_upload_file",
   "playwright_evaluate",
+  "playwright_console_logs",
+  "playwright_network_inspection",
   "playwright_close",
   "playwright_expect_response",
   "playwright_assert_response",
