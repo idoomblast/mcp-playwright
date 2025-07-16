@@ -99,7 +99,8 @@ export function createToolDefinitions() {
               password: { type: "string", description: "Password for proxy authentication (optional)" }
             },
             required: ["server"]
-          }
+          },
+          userDataDir: { type: "string", description: "Path to user data directory for persistent browser profile (optional)" }
         },
         required: ["url"],
       },

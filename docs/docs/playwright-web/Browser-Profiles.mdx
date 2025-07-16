@@ -1,0 +1,343 @@
+---
+sidebar_position: 5
+---
+
+# 🔧 Browser Profiles & Persistent Sessions
+
+Playwright MCP Server now supports **persistent browser profiles** using the `userDataDir` parameter. This allows you to maintain browser data (cookies, local storage, history, etc.) between automation sessions.
+
+## What are Browser Profiles?
+
+Browser profiles store:
+- **Cookies** and session data
+- **Local Storage** and Session Storage
+- **Browser history** and bookmarks
+- **Extensions** and settings
+- **Authentication states** (logged-in sessions)
+
+## Using Browser Profiles
+
+### Basic Usage
+
+```javascript
+await playwright_navigate({
+  url: "https://example.com",
+  userDataDir: "/path/to/profile/directory"
+});
+```
+
+### Persistent Login Sessions
+
+```javascript
+// First session - Login and save session
+await playwright_navigate({
+  url: "https://gmail.com",
+  userDataDir: "/home/user/gmail-profile"
+});
+
+// Login process...
+await playwright_fill({ selector: "input[type='email']", value: "user@gmail.com" });
+await playwright_fill({ selector: "input[type='password']", value: "password" });
+await playwright_click({ selector: "button[type='submit']" });
+
+// Close browser - session is saved!
+await playwright_close();
+
+// Second session - Automatic login from saved profile
+await playwright_navigate({
+  url: "https://gmail.com",
+  userDataDir: "/home/user/gmail-profile"  // Same profile path
+});
+// You're already logged in!
+```
+
+## Configuration Options
+
+### Basic Profile Configuration
+
+```javascript
+await playwright_navigate({
+  url: "https://example.com",
+  userDataDir: "/path/to/profile",
+  browserType: "chromium",    // chromium, firefox, webkit
+  headless: false,
+  width: 1920,
+  height: 1080
+});
+```
+
+### Profile with Proxy
+
+```javascript
+await playwright_navigate({
+  url: "https://example.com",
+  userDataDir: "/path/to/profile",
+  proxy: {
+    server: "http://proxy.example.com:8080",
+    username: "proxyuser",
+    password: "proxypass"
+  }
+});
+```
+
+### Profile with Custom Settings
+
+```javascript
+await playwright_navigate({
+  url: "https://example.com",
+  userDataDir: "/path/to/profile",
+  acceptInsecureCerts: true,
+  ignoreHTTPSErrors: true,
+  headless: false
+});
+```
+
+## Multi-Browser Support
+
+Browser profiles work with all supported browser engines:
+
+### Chromium Profile
+```javascript
+await playwright_navigate({
+  url: "https://example.com",
+  userDataDir: "/profiles/chromium-profile",
+  browserType: "chromium"
+});
+```
+
+### Firefox Profile
+```javascript
+await playwright_navigate({
+  url: "https://example.com",
+  userDataDir: "/profiles/firefox-profile",
+  browserType: "firefox"
+});
+```
+
+### WebKit Profile
+```javascript
+await playwright_navigate({
+  url: "https://example.com",
+  userDataDir: "/profiles/webkit-profile",
+  browserType: "webkit"
+});
+```
+
+## Best Practices
+
+### 1. Profile Organization
+```
+/browser-profiles/
+├── development/
+│   ├── github/
+│   ├── gmail/
+│   └── testing/
+├── staging/
+│   ├── app-staging/
+│   └── api-staging/
+└── production/
+    ├── monitoring/
+    └── admin/
+```
+
+### 2. Environment-Specific Profiles
+```javascript
+const profilePath = process.env.NODE_ENV === 'production' 
+  ? '/profiles/prod/admin-profile'
+  : '/profiles/dev/admin-profile';
+
+await playwright_navigate({
+  url: "https://admin.example.com",
+  userDataDir: profilePath
+});
+```
+
+### 3. Clean Session Management
+```javascript
+// Start fresh session when needed
+await playwright_close();  // Close current session
+
+// Remove old profile for clean start
+const fs = require('fs');
+if (fs.existsSync('/path/to/profile')) {
+  fs.rmSync('/path/to/profile', { recursive: true });
+}
+
+await playwright_navigate({
+  url: "https://example.com",
+  userDataDir: "/path/to/profile"  // Fresh profile
+});
+```
+
+## Common Use Cases
+
+### 1. Multi-Account Testing
+```javascript
+// Account 1
+await playwright_navigate({
+  url: "https://app.example.com",
+  userDataDir: "/profiles/account1"
+});
+// Test with Account 1...
+
+await playwright_close();
+
+// Account 2  
+await playwright_navigate({
+  url: "https://app.example.com",
+  userDataDir: "/profiles/account2"
+});
+// Test with Account 2...
+```
+
+### 2. E-commerce Testing
+```javascript
+// Customer profile with shopping history
+await playwright_navigate({
+  url: "https://shop.example.com",
+  userDataDir: "/profiles/customer-with-cart"
+});
+
+// Admin profile for backend testing
+await playwright_navigate({
+  url: "https://admin.shop.example.com",
+  userDataDir: "/profiles/shop-admin"
+});
+```
+
+### 3. Social Media Automation
+```javascript
+// Personal account
+await playwright_navigate({
+  url: "https://twitter.com",
+  userDataDir: "/profiles/personal-twitter"
+});
+
+// Business account
+await playwright_navigate({
+  url: "https://twitter.com", 
+  userDataDir: "/profiles/business-twitter"
+});
+```
+
+## Platform-Specific Paths
+
+### Windows
+```javascript
+userDataDir: "C:\\Users\\Username\\AppData\\Local\\BrowserProfiles\\MyProfile"
+```
+
+### macOS
+```javascript
+userDataDir: "/Users/username/Library/Application Support/BrowserProfiles/MyProfile"
+```
+
+### Linux
+```javascript
+userDataDir: "/home/username/.config/browser-profiles/MyProfile"
+```
+
+## Profile vs Regular Sessions
+
+| Feature | Regular Session | Profile Session |
+|---------|----------------|-----------------|
+| **Persistence** | ❌ Lost on close | ✅ Saved automatically |
+| **Login State** | ❌ Must re-login | ✅ Stays logged in |
+| **Cookies** | ❌ Not saved | ✅ Persistent |
+| **History** | ❌ Not saved | ✅ Persistent |
+| **Performance** | ✅ Faster startup | ⚠️ Slightly slower |
+| **Storage** | ✅ No disk usage | ⚠️ Uses disk space |
+
+## Troubleshooting
+
+### Profile Already in Use
+```javascript
+// Close any existing browser using the profile
+await playwright_close();
+
+// Wait a moment before reusing
+await new Promise(resolve => setTimeout(resolve, 1000));
+
+await playwright_navigate({
+  url: "https://example.com",
+  userDataDir: "/path/to/profile"
+});
+```
+
+### Profile Corruption
+```javascript
+// Delete corrupted profile
+const fs = require('fs');
+const profilePath = '/path/to/profile';
+
+if (fs.existsSync(profilePath)) {
+  fs.rmSync(profilePath, { recursive: true });
+}
+
+// Create fresh profile
+await playwright_navigate({
+  url: "https://example.com",
+  userDataDir: profilePath
+});
+```
+
+### Permission Issues
+```bash
+# Fix profile directory permissions (Linux/macOS)
+chmod -R 755 /path/to/profile/directory
+chown -R $USER:$USER /path/to/profile/directory
+```
+
+## Important Notes
+
+⚠️ **Security Considerations:**
+- Profile directories may contain sensitive data
+- Use secure paths with appropriate permissions
+- Don't share profiles across different environments
+
+⚠️ **Performance:**
+- Large profiles may slow down browser startup
+- Clean profiles periodically for better performance
+- Consider profile size in automated testing
+
+⚠️ **Browser Compatibility:**
+- Profile formats are browser-specific
+- Don't reuse profiles across different browser types
+- Some browsers may lock profile directories
+
+## Example: Complete E-commerce Test Flow
+
+```javascript
+// Setup persistent customer profile
+await playwright_navigate({
+  url: "https://shop.example.com",
+  userDataDir: "/profiles/customer-test",
+  browserType: "chromium",
+  headless: false
+});
+
+// Login once (will be remembered)
+await playwright_fill({ selector: "#email", value: "customer@test.com" });
+await playwright_fill({ selector: "#password", value: "password123" });
+await playwright_click({ selector: "#login-btn" });
+
+// Add items to cart (cart state will persist)
+await playwright_click({ selector: ".product:first-child .add-to-cart" });
+await playwright_click({ selector: ".product:nth-child(2) .add-to-cart" });
+
+// Close browser - everything is saved
+await playwright_close();
+
+// Later: Resume where we left off
+await playwright_navigate({
+  url: "https://shop.example.com",
+  userDataDir: "/profiles/customer-test"  // Same profile
+});
+
+// We're still logged in, cart still has items!
+await playwright_click({ selector: "#cart-icon" });
+await playwright_click({ selector: "#checkout-btn" });
+// Continue with checkout...
+```
+
+This powerful feature enables more realistic testing scenarios and efficient automation workflows by maintaining browser state across sessions. 

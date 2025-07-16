@@ -117,6 +117,7 @@ interface BrowserSettings {
   };
   acceptInsecureCerts?: boolean;
   ignoreHTTPSErrors?: boolean;
+  userDataDir?: string;
 }
 
 async function registerConsoleMessage(page) {
@@ -178,7 +179,7 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
 
     // Launch new browser if needed
     if (!browser) {
-      const { viewport, userAgent, headless = false, browserType = 'chromium', proxy, acceptInsecureCerts = true, ignoreHTTPSErrors = true } = browserSettings ?? {};
+      const { viewport, userAgent, headless = false, browserType = 'chromium', proxy, acceptInsecureCerts, ignoreHTTPSErrors, userDataDir } = browserSettings ?? {};
       
       // If browser type is changing, force a new browser instance
       if (browser && currentBrowserType !== browserType) {
@@ -190,7 +191,7 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
         resetBrowserState();
       }
       
-      console.error(`Launching new ${browserType} browser instance...`);
+      console.error(`Launching new ${browserType} browser instance${userDataDir ? ' with persistent profile' : ''}...`);
       
       // Use the appropriate browser engine
       let browserInstance;
@@ -209,33 +210,58 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
       
       const executablePath = process.env.CHROME_EXECUTABLE_PATH;
 
-      browser = await browserInstance.launch({
-        headless,
-        executablePath: executablePath,
-        ...(proxy && { proxy }),
-        ...(acceptInsecureCerts && { acceptInsecureCerts })
-      });
+      // If userDataDir is provided, use persistent context
+      if (userDataDir) {
+        const context = await browserInstance.launchPersistentContext(userDataDir, {
+          headless,
+          executablePath: executablePath,
+          ...(proxy && { proxy }),
+          ...(acceptInsecureCerts !== undefined && { acceptInsecureCerts }),
+          ...userAgent && { userAgent },
+          viewport: {
+            width: viewport?.width ?? 1600,
+            height: viewport?.height ?? 900,
+          },
+          deviceScaleFactor: 1,
+          ignoreHTTPSErrors: ignoreHTTPSErrors ?? false,
+        });
+
+        // For persistent context, we get the context and its pages
+        browser = context.browser(); // May be null for persistent contexts
+        page = context.pages()[0] || await context.newPage();
+        
+        // Store the context in page for later use
+        (page as any)._playwrightContext = context;
+      } else {
+        // Regular browser launch with new context
+        browser = await browserInstance.launch({
+          headless,
+          executablePath: executablePath,
+          ...(proxy && { proxy }),
+          ...(acceptInsecureCerts && { acceptInsecureCerts })
+        });
+        
+        // Add cleanup logic when browser is disconnected
+        browser.on('disconnected', () => {
+          console.error("Browser disconnected event triggered");
+          browser = undefined;
+          page = undefined;
+        });
+
+        const context = await browser.newContext({
+          ...userAgent && { userAgent },
+          viewport: {
+            width: viewport?.width ?? 1600,
+            height: viewport?.height ?? 900,
+          },
+          deviceScaleFactor: 1,
+          ignoreHTTPSErrors: ignoreHTTPSErrors ?? false,
+        });
+
+        page = await context.newPage();
+      }
       
       currentBrowserType = browserType;
-
-      // Add cleanup logic when browser is disconnected
-      browser.on('disconnected', () => {
-        console.error("Browser disconnected event triggered");
-        browser = undefined;
-        page = undefined;
-      });
-
-      const context = await browser.newContext({
-        ...userAgent && { userAgent },
-        viewport: {
-          width: viewport?.width ?? 1280,
-          height: viewport?.height ?? 720,
-        },
-        deviceScaleFactor: 1,
-        ignoreHTTPSErrors: ignoreHTTPSErrors,
-      });
-
-      page = await context.newPage();
 
       // Register console message handler
       await registerConsoleMessage(page);
@@ -267,7 +293,7 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
     resetBrowserState();
     
     // Try one more time from scratch
-    const { viewport, userAgent, headless = false, browserType = 'chromium', proxy, acceptInsecureCerts = true, ignoreHTTPSErrors = true } = browserSettings ?? {};
+    const { viewport, userAgent, headless = false, browserType = 'chromium', proxy, acceptInsecureCerts, ignoreHTTPSErrors, userDataDir } = browserSettings ?? {};
     
     // Use the appropriate browser engine
     let browserInstance;
@@ -284,30 +310,59 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
         break;
     }
     
-    browser = await browserInstance.launch({ 
-      headless,
-      ...(proxy && { proxy }),
-      ...(acceptInsecureCerts && { acceptInsecureCerts })
-    });
-    currentBrowserType = browserType;
+    // If userDataDir is provided, use persistent context
+    if (userDataDir) {
+      const executablePath = process.env.CHROME_EXECUTABLE_PATH;
+      const context = await browserInstance.launchPersistentContext(userDataDir, {
+        headless,
+        executablePath: executablePath,
+        ...(proxy && { proxy }),
+        ...(acceptInsecureCerts !== undefined && { acceptInsecureCerts }),
+        ...userAgent && { userAgent },
+        viewport: {
+          width: viewport?.width ?? 1600,
+          height: viewport?.height ?? 900,
+        },
+        deviceScaleFactor: 1,
+        ignoreHTTPSErrors: ignoreHTTPSErrors ?? false,
+      });
+
+      // For persistent context, we get the context and its pages
+      browser = context.browser(); // May be null for persistent contexts
+      page = context.pages()[0] || await context.newPage();
+      
+      // Store the context in page for later use
+      (page as any)._playwrightContext = context;
+    } else {
+      // Regular browser launch with new context
+      const executablePath = process.env.CHROME_EXECUTABLE_PATH;
+      browser = await browserInstance.launch({ 
+        headless,
+        executablePath: executablePath,
+        ...(proxy && { proxy }),
+        ...(acceptInsecureCerts && { acceptInsecureCerts })
+      });
+      
+      browser.on('disconnected', () => {
+        console.error("Browser disconnected event triggered (retry)");
+        browser = undefined;
+        page = undefined;
+      });
+
+      const context = await browser.newContext({
+        ...userAgent && { userAgent },
+        viewport: {
+          width: viewport?.width ?? 1600,
+          height: viewport?.height ?? 900,
+        },
+        deviceScaleFactor: 1,
+        ignoreHTTPSErrors: ignoreHTTPSErrors ?? false,
+      });
+
+      page = await context.newPage();
+    }
     
-    browser.on('disconnected', () => {
-      console.error("Browser disconnected event triggered (retry)");
-      browser = undefined;
-      page = undefined;
-    });
-
-    const context = await browser.newContext({
-      ...userAgent && { userAgent },
-      viewport: {
-        width: viewport?.width ?? 1280,
-        height: viewport?.height ?? 720,
-      },
-      deviceScaleFactor: 1,
-      ignoreHTTPSErrors: ignoreHTTPSErrors,
-    });
-
-    page = await context.newPage();
+    currentBrowserType = browserType;
     
     await registerConsoleMessage(page);
     
@@ -451,7 +506,8 @@ export async function handleToolCall(
       browserType: args.browserType || 'chromium',
       proxy: args.proxy,
       acceptInsecureCerts: args.acceptInsecureCerts,
-      ignoreHTTPSErrors: args.ignoreHTTPSErrors
+      ignoreHTTPSErrors: args.ignoreHTTPSErrors,
+      userDataDir: args.userDataDir
     };
     
     try {

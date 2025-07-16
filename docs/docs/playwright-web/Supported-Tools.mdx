@@ -109,6 +109,21 @@ Navigate to a URL in the browser with configurable viewport and browser settings
 - **`headless`** *(boolean, optional, default: false)*:  
   Run browser in headless mode.
 
+- **`userDataDir`** *(string, optional)*:  
+  Path to user data directory for persistent browser profile. When provided, browser will use persistent context that saves cookies, local storage, and other browser data between sessions.
+
+- **`acceptInsecureCerts`** *(boolean, optional, default: true)*:  
+  Accept insecure/self-signed certificates.
+
+- **`ignoreHTTPSErrors`** *(boolean, optional, default: true)*:  
+  Ignore HTTPS errors.
+
+- **`proxy`** *(object, optional)*:  
+  Proxy configuration for browser:
+  - **`server`** *(string, required)*: Proxy server URL (e.g., "http://proxy.server:8080")
+  - **`username`** *(string, optional)*: Username for proxy authentication
+  - **`password`** *(string, optional)*: Password for proxy authentication
+
 ---
 
 ### Playwright_screenshot
