@@ -33,6 +33,7 @@
     "@playwright/browser-webkit": "1.53.1",
     "@playwright/test": "^1.53.1",
     "@types/express": "^5.0.5",
+    "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "mcp-evals": "^1.0.18",
     "playwright": "1.53.1",

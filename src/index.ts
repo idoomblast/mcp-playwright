@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { randomUUID } from 'crypto';
 import express from 'express';
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -7,18 +10,8 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { createToolDefinitions } from "./tools.js";
 import { setupRequestHandlers } from "./requestHandler.js";
 
-// Parse command line arguments
-const args = process.argv.slice(2);
-let port = 3000;
-for (let i = 0; i < args.length; i++) {
-  if (args[i] === '--port' && i + 1 < args.length) {
-    const parsedPort = parseInt(args[i + 1]);
-    if (!isNaN(parsedPort) && parsedPort > 0) {
-      port = parsedPort;
-    }
-    break;
-  }
-}
+// Get port from environment variable or use default
+const port = parseInt(process.env.PORT) || 3000;
 
 async function runServer() {
   const server = new Server(
@@ -42,7 +35,8 @@ async function runServer() {
 
   // Create HTTP transport
   const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: () => randomUUID(),
+    sessionIdGenerator: undefined, // Stateless mode
+    enableJsonResponse: true, // Use direct JSON responses
   });
 
   // Create Express app
@@ -50,6 +44,23 @@ async function runServer() {
 
   // Middleware to parse JSON
   app.use(express.json());
+
+  // Authentication middleware
+  app.use('/mcp', (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized: Missing or invalid Bearer token' });
+    }
+    const token = authHeader.substring(7); // Remove 'Bearer '
+    // For simplicity, check against a hardcoded token (in production, verify JWT or database)
+    const expectedToken = process.env.MCP_BEARER_TOKEN || 'default-token';
+    if (token !== expectedToken) {
+      return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    }
+    // Attach auth info to request
+    (req as any).authInfo = { token };
+    next();
+  });
 
   // Handle MCP requests
   app.use('/mcp', async (req, res) => {
