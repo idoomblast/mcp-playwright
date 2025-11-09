@@ -18,7 +18,8 @@ import {
   NetworkInspectionTool,
   ExpectResponseTool,
   AssertResponseTool,
-  CustomUserAgentTool
+  CustomUserAgentTool,
+  ResizeTool
 } from './tools/browser/index.js';
 import {
   ClickTool,
@@ -72,6 +73,7 @@ export function setGlobalPage(newPage: Page): void {
 // Tool instances
 let screenshotTool: ScreenshotTool;
 let navigationTool: NavigationTool;
+let resizeTool: ResizeTool;
 let closeBrowserTool: CloseBrowserTool;
 let consoleLogsTool: ConsoleLogsTool;
 let networkInspectionTool: NetworkInspectionTool;
@@ -393,6 +395,7 @@ function initializeTools(server: any) {
   // Browser tools
   if (!screenshotTool) screenshotTool = new ScreenshotTool(server);
   if (!navigationTool) navigationTool = new NavigationTool(server);
+  if (!resizeTool) resizeTool = new ResizeTool(server);
   if (!closeBrowserTool) closeBrowserTool = new CloseBrowserTool(server);
   if (!consoleLogsTool) consoleLogsTool = new ConsoleLogsTool(server);
   if (!networkInspectionTool) networkInspectionTool = new NetworkInspectionTool(server);
@@ -553,6 +556,9 @@ export async function handleToolCall(
       // Browser tools
       case "playwright_navigate":
         return await navigationTool.execute(args, context);
+        
+      case "playwright_resize":
+        return await resizeTool.execute(args, context);
         
       case "playwright_screenshot":
         return await screenshotTool.execute(args, context);

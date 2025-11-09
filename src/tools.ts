@@ -510,12 +510,25 @@ export function createToolDefinitions() {
         required: ["selector"],
       },
     },
+    {
+      name: "playwright_resize",
+      description: "Resize the browser viewport to test responsive layouts without closing and reopening the browser",
+      inputSchema: {
+        type: "object",
+        properties: {
+          width: { type: "number", description: "New viewport width in pixels" },
+          height: { type: "number", description: "New viewport height in pixels" }
+        },
+        required: ["width", "height"],
+      },
+    },
   ] as const satisfies Tool[];
 }
 
 // Browser-requiring tools for conditional browser launch
 export const BROWSER_TOOLS = [
   "playwright_navigate",
+  "playwright_resize",
   "playwright_screenshot",
   "playwright_click",
   "playwright_iframe_click",
