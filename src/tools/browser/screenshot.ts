@@ -46,25 +46,29 @@ export class ScreenshotTool extends BrowserToolBase {
         fs.mkdirSync(downloadsDir, { recursive: true });
       }
 
-      const outputPath = path.join(downloadsDir, filename);
-      screenshotOptions.path = outputPath;
-
       const screenshot = await page.screenshot(screenshotOptions);
       const base64Screenshot = screenshot.toString('base64');
 
-      const messages = [`Screenshot saved to: ${path.relative(process.cwd(), outputPath)}`];
+      this.screenshots.set(args.name || 'screenshot', base64Screenshot);
+      this.server.notification({
+        method: "notifications/resources/list_changed",
+      });
+      //return createSuccessResponse(`base64image: "data:image/png;base64,${base64Screenshot}"`);
+      return {
+        content: [{
+          type: "image",
+          data: `${base64Screenshot}`,
+          mimeType: "image/png",
+          metadata: {
+            name: filename || 'screenshot',
+            description: `${filename} taken at ${new Date().toISOString()}`,
+            source: "screenshot_tool",
+            encoding: "base64"
+          }
+        }],
+        isError: false
+      };
 
-      // Handle base64 storage
-      if (args.storeBase64 !== false) {
-        this.screenshots.set(args.name || 'screenshot', base64Screenshot);
-        this.server.notification({
-          method: "notifications/resources/list_changed",
-        });
-
-        messages.push(`Screenshot also stored in memory with name: '${args.name || 'screenshot'}'`);
-      }
-
-      return createSuccessResponse(messages);
     });
   }
 

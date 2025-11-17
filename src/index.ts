@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({quiet: true});
 
 import { randomUUID } from 'crypto';
 import express from 'express';
@@ -16,7 +16,7 @@ const port = parseInt(process.env.PORT) || 3000;
 async function runServer() {
   const server = new Server(
     {
-      name: "playwright-mcp",
+      name: "browser",
       version: "1.0.6",
     },
     {
