@@ -3,15 +3,15 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import type { Page } from 'playwright';
 import { BrowserToolBase } from './base.js';
-import { ToolContext, ToolResponse, createSuccessResponse } from '../common/types.js';
-
+import { ToolContext, ToolResponse } from '../common/types.js';
+import type { TextContent, ImageContent } from '@modelcontextprotocol/sdk/types.js';
 const defaultDownloadsPath = path.join(os.homedir(), 'Downloads');
 
 /**
  * Tool for taking screenshots of pages or elements
  */
 export class ScreenshotTool extends BrowserToolBase {
-  private screenshots = new Map<string, string>();
+  private screenshots: (TextContent | ImageContent)[] = [];
 
   /**
    * Execute the screenshot tool
@@ -48,14 +48,7 @@ export class ScreenshotTool extends BrowserToolBase {
 
       const screenshot = await page.screenshot(screenshotOptions);
       const base64Screenshot = screenshot.toString('base64');
-
-      this.screenshots.set(args.name || 'screenshot', base64Screenshot);
-      this.server.notification({
-        method: "notifications/resources/list_changed",
-      });
-      //return createSuccessResponse(`base64image: "data:image/png;base64,${base64Screenshot}"`);
-      return {
-        content: [{
+      const content = {
           type: "image",
           data: `${base64Screenshot}`,
           mimeType: "image/png",
@@ -65,17 +58,27 @@ export class ScreenshotTool extends BrowserToolBase {
             source: "screenshot_tool",
             encoding: "base64"
           }
-        }],
+        } as ImageContent;
+      this.screenshots.push(content);
+      this.server.notification({
+        method: "notifications/resources/list_changed",
+      });
+      //return createSuccessResponse(`base64image: "data:image/png;base64,${base64Screenshot}"`);
+      const message: TextContent = {
+        type: "text",
+        text: `Screenshot taken: ${filename}`,
+      };
+      return {
+        content: [message,content],
         isError: false
       };
-
     });
   }
 
   /**
    * Get all stored screenshots
    */
-  getScreenshots(): Map<string, string> {
+  getScreenshots(): (TextContent | ImageContent)[] {
     return this.screenshots;
   }
 } 

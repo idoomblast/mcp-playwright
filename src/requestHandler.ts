@@ -1,4 +1,4 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { 
   ListResourcesRequestSchema, 
   ReadResourceRequestSchema, 
@@ -8,9 +8,9 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { handleToolCall, getConsoleLogs, getScreenshots } from "./toolHandler.js";
 
-export function setupRequestHandlers(server: Server, tools: Tool[]) {
+export function setupRequestHandlers(server: McpServer, tools: Tool[]) {
   // List resources handler
-  server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+  server.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: [
       {
         uri: "console://logs",
@@ -26,7 +26,7 @@ export function setupRequestHandlers(server: Server, tools: Tool[]) {
   }));
 
   // Read resource handler
-  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  server.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const uri = request.params.uri.toString();
 
     if (uri === "console://logs") {
@@ -58,12 +58,12 @@ export function setupRequestHandlers(server: Server, tools: Tool[]) {
   });
 
   // List tools handler
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  server.server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: tools,
   }));
 
   // Call tool handler
-  server.setRequestHandler(CallToolRequestSchema, async (request) =>
-    handleToolCall(request.params.name, request.params.arguments ?? {}, server)
+  server.server.setRequestHandler(CallToolRequestSchema, async (request) =>
+    handleToolCall(request.params.name, request.params.arguments ?? {}, server.server)
   );
 }

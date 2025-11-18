@@ -16,6 +16,7 @@
   ],
   "scripts": {
     "build": "tsc && shx chmod +x dist/*.js",
+    "prod": "node ./dist/index.js",
     "prepare": "npm run build",
     "watch": "tsc --watch",
     "test": "jest --testMatch=\"<rootDir>/src/__tests__/**/*.test.ts\"",
@@ -27,7 +28,7 @@
     "url": "https://github.com/executeautomation/mcp-playwright.git"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.11.1",
+    "@modelcontextprotocol/sdk": "^1.22.0",
     "@playwright/browser-chromium": "1.53.1",
     "@playwright/browser-firefox": "1.53.1",
     "@playwright/browser-webkit": "1.53.1",

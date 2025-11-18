@@ -5,7 +5,7 @@ dotenv.config({quiet: true});
 
 import { randomUUID } from 'crypto';
 import express from 'express';
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createToolDefinitions } from "./tools.js";
 import { setupRequestHandlers } from "./requestHandler.js";
@@ -14,7 +14,7 @@ import { setupRequestHandlers } from "./requestHandler.js";
 const port = parseInt(process.env.PORT) || 3000;
 
 async function runServer() {
-  const server = new Server(
+  const server = new McpServer(
     {
       name: "browser",
       version: "1.0.6",
@@ -33,11 +33,7 @@ async function runServer() {
   // Setup request handlers
   setupRequestHandlers(server, TOOLS);
 
-  // Create HTTP transport
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined, // Stateless mode
-    enableJsonResponse: true, // Use direct JSON responses
-  });
+
 
   // Create Express app
   const app = express();
@@ -64,11 +60,22 @@ async function runServer() {
 
   // Handle MCP requests
   app.use('/mcp', async (req, res) => {
+    // In stateless mode, create a new transport for each request to prevent
+    // request ID collisions. Different clients may use the same JSON-RPC request IDs,
+    // which would cause responses to be routed to the wrong HTTP connections if
+    // the transport state is shared.
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined, // Stateless mode
+      enableJsonResponse: true, // Use direct JSON responses
+    });
+
+    res.on('close', () => {
+      transport.close();
+    });
+
+    await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
   });
-
-  // Connect server to transport
-  await server.connect(transport);
 
   // Graceful shutdown logic
   function shutdown() {

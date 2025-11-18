@@ -69,12 +69,12 @@ describe('Browser Profile Support', () => {
         headless: true
       });
 
-      expect(chromium.launchPersistentContext).toHaveBeenCalledWith(userDataDir, {
+            expect(chromium.launchPersistentContext).toHaveBeenCalledWith(userDataDir, {
         headless: true,
         executablePath: undefined,
         viewport: {
-          width: 1280,
-          height: 720,
+          width: 1600,
+          height: 900,
         },
         deviceScaleFactor: 1,
         ignoreHTTPSErrors: false,
@@ -97,8 +97,8 @@ describe('Browser Profile Support', () => {
         headless: true,
         executablePath: undefined,
         viewport: {
-          width: 1280,
-          height: 720,
+          width: 1600,
+          height: 900,
         },
         deviceScaleFactor: 1,
         ignoreHTTPSErrors: false,
@@ -118,8 +118,8 @@ describe('Browser Profile Support', () => {
         headless: true,
         executablePath: undefined,
         viewport: {
-          width: 1280,
-          height: 720,
+          width: 1600,
+          height: 900,
         },
         deviceScaleFactor: 1,
         ignoreHTTPSErrors: false,
@@ -146,8 +146,8 @@ describe('Browser Profile Support', () => {
         executablePath: undefined,
         proxy: proxy,
         viewport: {
-          width: 1280,
-          height: 720,
+          width: 1600,
+          height: 900,
         },
         deviceScaleFactor: 1,
         ignoreHTTPSErrors: false,
@@ -170,8 +170,8 @@ describe('Browser Profile Support', () => {
         executablePath: undefined,
         userAgent: userAgent,
         viewport: {
-          width: 1280,
-          height: 720,
+          width: 1600,
+          height: 900,
         },
         deviceScaleFactor: 1,
         ignoreHTTPSErrors: false,
@@ -293,8 +293,8 @@ describe('Browser Profile Support', () => {
         executablePath: undefined,
         acceptInsecureCerts: false,
         viewport: {
-          width: 1280,
-          height: 720,
+          width: 1600,
+          height: 900,
         },
         deviceScaleFactor: 1,
         ignoreHTTPSErrors: false,

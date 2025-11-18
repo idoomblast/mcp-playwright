@@ -1,6 +1,6 @@
 import type { Browser, Page } from 'playwright';
 import { chromium, firefox, webkit, request } from 'playwright';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult, ImageContent, TextContent } from '@modelcontextprotocol/sdk/types.js';
 import { BROWSER_TOOLS, API_TOOLS } from './tools.js';
 import type { ToolContext } from './tools/common/types.js';
 import { ActionRecorder } from './tools/codegen/recorder.js';
@@ -719,8 +719,24 @@ export function getConsoleLogs(): string[] {
 /**
  * Get screenshots
  */
-export function getScreenshots(): Map<string, string> {
-  return screenshotTool?.getScreenshots() ?? new Map();
+export function getScreenshots(): (TextContent | ImageContent)[] {
+  const screenshots = screenshotTool?.getScreenshots();
+
+  if (!screenshots) {
+    return [];
+  }
+
+  // If the tool returns an array already, return it
+  if (Array.isArray(screenshots)) {
+    return screenshots;
+  }
+
+  // Fallback: if it's some other iterable, convert to array; otherwise return empty
+  try {
+    return Array.from(screenshots as Iterable<TextContent | ImageContent>);
+  } catch {
+    return [];
+  }
 }
 
 export { registerConsoleMessage };
