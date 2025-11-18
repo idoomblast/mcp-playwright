@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { codegenTools } from './tools/codegen';
 
@@ -7,521 +8,301 @@ export function createToolDefinitions() {
     {
       name: "start_codegen_session",
       description: "Start a new code generation session to record Playwright actions",
-      inputSchema: {
-        type: "object",
-        properties: {
-          options: {
-            type: "object",
-            description: "Code generation options",
-            properties: {
-              outputPath: { 
-                type: "string", 
-                description: "Directory path where generated tests will be saved (use absolute path)" 
-              },
-              testNamePrefix: { 
-                type: "string", 
-                description: "Prefix to use for generated test names (default: 'GeneratedTest')" 
-              },
-              includeComments: { 
-                type: "boolean", 
-                description: "Whether to include descriptive comments in generated tests" 
-              }
-            },
-            required: ["outputPath"]
-          }
-        },
-        required: ["options"]
-      }
+      inputSchema: z.object({
+        options: z.object({
+          outputPath: z.string().describe("Directory path where generated tests will be saved (use absolute path)"),
+          testNamePrefix: z.string().describe("Prefix to use for generated test names (default: 'GeneratedTest')").optional().default('GeneratedTest'),
+          includeComments: z.boolean().describe("Whether to include descriptive comments in generated tests").optional().default(false)
+        }).describe("Code generation options")
+      })
     },
     {
       name: "end_codegen_session",
       description: "End a code generation session and generate the test file",
-      inputSchema: {
-        type: "object",
-        properties: {
-          sessionId: { 
-            type: "string", 
-            description: "ID of the session to end" 
-          }
-        },
-        required: ["sessionId"]
-      }
+      inputSchema: z.object({
+        sessionId: z.string().describe("ID of the session to end")
+      })
     },
     {
       name: "get_codegen_session",
       description: "Get information about a code generation session",
-      inputSchema: {
-        type: "object",
-        properties: {
-          sessionId: { 
-            type: "string", 
-            description: "ID of the session to retrieve" 
-          }
-        },
-        required: ["sessionId"]
-      }
+      inputSchema: z.object({
+        sessionId: z.string().describe("ID of the session to retrieve")
+      })
     },
     {
       name: "clear_codegen_session",
       description: "Clear a code generation session without generating a test",
-      inputSchema: {
-        type: "object",
-        properties: {
-          sessionId: { 
-            type: "string", 
-            description: "ID of the session to clear" 
-          }
-        },
-        required: ["sessionId"]
-      }
+      inputSchema: z.object({
+        sessionId: z.string().describe("ID of the session to clear")
+      })
     },
     {
       name: "playwright_navigate",
       description: "Navigate to a URL",
-      inputSchema: {
-        type: "object",
-        properties: {
-          url: { type: "string", description: "URL to navigate to the website specified" },
-          browserType: { type: "string", description: "Browser type to use (chromium, firefox, webkit). Defaults to chromium", enum: ["chromium", "firefox", "webkit"] },
-          width: { type: "number", description: "Viewport width in pixels (default: 1280)" },
-          height: { type: "number", description: "Viewport height in pixels (default: 720)" },
-          timeout: { type: "number", description: "Navigation timeout in milliseconds" },
-          waitUntil: { type: "string", description: "Navigation wait condition" },
-          headless: { type: "boolean", description: "Run browser in headless mode (default: false)" },
-                acceptInsecureCerts: { type: "boolean", description: "Accept insecure/self-signed certificates (default: true)" },
-      ignoreHTTPSErrors: { type: "boolean", description: "Ignore HTTPS errors (default: true)" },
-          proxy: {
-            type: "object",
-            description: "Proxy configuration for browser",
-            properties: {
-              server: { type: "string", description: "Proxy server URL (e.g., http://proxy.server:8080)" },
-              username: { type: "string", description: "Username for proxy authentication (optional)" },
-              password: { type: "string", description: "Password for proxy authentication (optional)" }
-            },
-            required: ["server"]
-          },
-          userDataDir: { type: "string", description: "Path to user data directory for persistent browser profile (optional)" }
-        },
-        required: ["url"],
-      },
+      inputSchema: z.object({
+        url: z.string().describe("URL to navigate to the website specified"),
+        browserType: z.enum(["chromium", "firefox", "webkit"]).describe("Browser type to use (chromium, firefox, webkit). Defaults to chromium").optional().default('chromium'),
+        width: z.number().describe("Viewport width in pixels (default: 1280)").optional().default(1280),
+        height: z.number().describe("Viewport height in pixels (default: 720)").optional().default(720),
+        timeout: z.number().describe("Navigation timeout in milliseconds").optional(),
+        waitUntil: z.string().describe("Navigation wait condition").optional(),
+        headless: z.boolean().describe("Run browser in headless mode (default: false)").optional().default(false),
+        acceptInsecureCerts: z.boolean().describe("Accept insecure/self-signed certificates (default: true)").optional().default(true),
+        ignoreHTTPSErrors: z.boolean().describe("Ignore HTTPS errors (default: true)").optional().default(true),
+        proxy: z.object({
+          server: z.string().describe("Proxy server URL (e.g., http://proxy.server:8080)").optional(),
+          username: z.string().describe("Username for proxy authentication (optional)").optional(),
+          password: z.string().describe("Password for proxy authentication (optional)").optional()
+        }).describe("Proxy configuration for browser").optional().default(undefined),
+        userDataDir: z.string().describe("Path to user data directory for persistent browser profile (optional)").optional()
+      })
     },
     {
       name: "playwright_screenshot",
       description: "Take a screenshot of the current page or a specific element",
-      inputSchema: {
-        type: "object",
-        properties: {
-          name: { type: "string", description: "Name for the screenshot" },
-          selector: { type: "string", description: "CSS selector for element to screenshot" },
-          width: { type: "number", description: "Width in pixels (default: 800)" },
-          height: { type: "number", description: "Height in pixels (default: 600)" },
-          //storeBase64: { type: "boolean", description: "Store screenshot in base64 format (default: true), return base64image on reply, use this for remote environment, decode before use" },
-          fullPage: { type: "boolean", description: "Store screenshot of the entire page (default: false)" },
-          //savePng: { type: "boolean", description: "Save screenshot as PNG file (default: false)" },
-        },
-        required: ["name"],
-      },
+      inputSchema: z.object({
+        name: z.string().describe("Name for the screenshot"),
+        selector: z.string().describe("CSS selector for element to screenshot").optional(),
+        width: z.number().describe("Width in pixels (default: 800)").optional().default(800),
+        height: z.number().describe("Height in pixels (default: 600)").optional().default(600),
+        fullPage: z.boolean().describe("Store screenshot of the entire page (default: false)").optional().default(false)
+      })
     },
     {
       name: "playwright_click",
       description: "Click an element on the page",
-      inputSchema: {
-        type: "object",
-        properties: {
-          selector: { type: "string", description: "CSS selector for the element to click" },
-        },
-        required: ["selector"],
-      },
+      inputSchema: z.object({
+        selector: z.string().describe("CSS selector for the element to click")
+      })
     },
     {
       name: "playwright_iframe_click",
       description: "Click an element in an iframe on the page",
-      inputSchema: {
-        type: "object",
-        properties: {
-          iframeSelector: { type: "string", description: "CSS selector for the iframe containing the element to click" },
-          selector: { type: "string", description: "CSS selector for the element to click" },
-        },
-        required: ["iframeSelector", "selector"],
-      },
+      inputSchema: z.object({
+        iframeSelector: z.string().describe("CSS selector for the iframe containing the element to click"),
+        selector: z.string().describe("CSS selector for the element to click")
+      })
     },
     {
       name: "playwright_iframe_fill",
       description: "Fill an element in an iframe on the page",
-      inputSchema: {
-        type: "object",
-        properties: {
-          iframeSelector: { type: "string", description: "CSS selector for the iframe containing the element to fill" },
-          selector: { type: "string", description: "CSS selector for the element to fill" },
-          value: { type: "string", description: "Value to fill" },
-        },
-        required: ["iframeSelector", "selector", "value"],
-      },
+      inputSchema: z.object({
+        iframeSelector: z.string().describe("CSS selector for the iframe containing the element to fill"),
+        selector: z.string().describe("CSS selector for the element to fill"),
+        value: z.string().describe("Value to fill")
+      })
     },
     {
       name: "playwright_fill",
       description: "fill out an input field",
-      inputSchema: {
-        type: "object",
-        properties: {
-          selector: { type: "string", description: "CSS selector for input field" },
-          value: { type: "string", description: "Value to fill" },
-        },
-        required: ["selector", "value"],
-      },
+      inputSchema: z.object({
+        selector: z.string().describe("CSS selector for input field"),
+        value: z.string().describe("Value to fill")
+      })
     },
     {
       name: "playwright_select",
       description: "Select an element on the page with Select tag",
-      inputSchema: {
-        type: "object",
-        properties: {
-          selector: { type: "string", description: "CSS selector for element to select" },
-          value: { type: "string", description: "Value to select" },
-        },
-        required: ["selector", "value"],
-      },
+      inputSchema: z.object({
+        selector: z.string().describe("CSS selector for element to select"),
+        value: z.string().describe("Value to select")
+      })
     },
     {
       name: "playwright_hover",
       description: "Hover an element on the page",
-      inputSchema: {
-        type: "object",
-        properties: {
-          selector: { type: "string", description: "CSS selector for element to hover" },
-        },
-        required: ["selector"],
-      },
+      inputSchema: z.object({
+        selector: z.string().describe("CSS selector for element to hover")
+      })
     },
     {
       name: "playwright_upload_file",
       description: "Upload a file to an input[type='file'] element on the page",
-      inputSchema: {
-        type: "object",
-        properties: {
-          selector: { type: "string", description: "CSS selector for the file input element" },
-          filePath: { type: "string", description: "Absolute path to the file to upload" }
-        },
-        required: ["selector", "filePath"],
-      },
+      inputSchema: z.object({
+        selector: z.string().describe("CSS selector for the file input element"),
+        filePath: z.string().describe("Absolute path to the file to upload")
+      })
     },
     {
       name: "playwright_evaluate",
       description: "Execute JavaScript in the browser console",
-      inputSchema: {
-        type: "object",
-        properties: {
-          script: { type: "string", description: "JavaScript code to execute" },
-        },
-        required: ["script"],
-      },
+      inputSchema: z.object({
+        script: z.string().describe("JavaScript code to execute")
+      })
     },
     {
       name: "playwright_console_logs",
       description: "Retrieve console logs from the browser with filtering options",
-      inputSchema: {
-        type: "object",
-        properties: {
-          type: {
-            type: "string",
-            description: "Type of logs to retrieve (all, error, warning, log, info, debug, exception)",
-            enum: ["all", "error", "warning", "log", "info", "debug", "exception"]
-          },
-          search: {
-            type: "string",
-            description: "Text to search for in logs (handles text with square brackets)"
-          },
-          limit: {
-            type: "number",
-            description: "Maximum number of logs to return"
-          },
-          clear: {
-            type: "boolean",
-            description: "Whether to clear logs after retrieval (default: false)"
-          }
-        },
-        required: [],
-      },
+      inputSchema: z.object({
+        type: z.enum(["all", "error", "warning", "log", "info", "debug", "exception"]).describe("Type of logs to retrieve (all, error, warning, log, info, debug, exception)").optional().default('all'),
+        search: z.string().describe("Text to search for in logs (handles text with square brackets)").optional(),
+        limit: z.number().describe("Maximum number of logs to return").optional(),
+        clear: z.boolean().describe("Whether to clear logs after retrieval (default: false)").optional().default(false)
+      })
     },
     {
       name: "playwright_network_inspection",
       description: "Monitor and inspect network traffic in the browser",
-      inputSchema: {
-        type: "object",
-        properties: {
-          action: {
-            type: "string",
-            description: "Action to perform (start, stop, get, clear)",
-            enum: ["start", "stop", "get", "clear"]
-          },
-          filter: {
-            type: "object",
-            description: "Filter criteria for network entries",
-            properties: {
-              method: {
-                type: "string",
-                description: "Filter by HTTP method (GET, POST, PUT, DELETE, etc.)"
-              },
-              url: {
-                type: "string",
-                description: "Filter by URL pattern (partial match)"
-              },
-              status: {
-                type: "number",
-                description: "Filter by HTTP status code"
-              },
-              resourceType: {
-                type: "string",
-                description: "Filter by resource type (document, stylesheet, script, xhr, fetch, etc.)"
-              },
-              minDuration: {
-                type: "number",
-                description: "Filter by minimum request duration in milliseconds"
-              }
-            }
-          },
-          limit: {
-            type: "number",
-            description: "Maximum number of network entries to return (default: 50)"
-          },
-          clear: {
-            type: "boolean",
-            description: "Whether to clear network entries after retrieval (default: false)"
-          },
-          format: {
-            type: "string",
-            description: "Output format (summary or detailed)",
-            enum: ["summary", "detailed"]
-          }
-        },
-        required: [],
-      },
+      inputSchema: z.object({
+        action: z.enum(["start", "stop", "get", "clear"]).describe("Action to perform (start, stop, get, clear)").optional(),
+        filter: z.object({
+          method: z.string().describe("Filter by HTTP method (GET, POST, PUT, DELETE, etc.)").optional(),
+          url: z.string().describe("Filter by URL pattern (partial match)").optional(),
+          status: z.number().describe("Filter by HTTP status code").optional(),
+          resourceType: z.string().describe("Filter by resource type (document, stylesheet, script, xhr, fetch, etc.)").optional(),
+          minDuration: z.number().describe("Filter by minimum request duration in milliseconds").optional()
+        }).describe("Filter criteria for network entries").optional(),
+        limit: z.number().describe("Maximum number of network entries to return (default: 50)").optional().default(50),
+        clear: z.boolean().describe("Whether to clear network entries after retrieval (default: false)").optional().default(false),
+        format: z.enum(["summary", "detailed"]).describe("Output format (summary or detailed)").optional()
+      })
     },
     {
       name: "playwright_close",
       description: "Close the browser and release all resources",
-      inputSchema: {
-        type: "object",
-        properties: {},
-        required: [],
-      },
+      inputSchema: z.object({})
     },
     {
       name: "playwright_get",
       description: "Perform an HTTP GET request",
-      inputSchema: {
-        type: "object",
-        properties: {
-          url: { type: "string", description: "URL to perform GET operation" }
-        },
-        required: ["url"],
-      },
+      inputSchema: z.object({
+        url: z.string().describe("URL to perform GET operation")
+      })
     },
     {
       name: "playwright_post",
       description: "Perform an HTTP POST request",
-      inputSchema: {
-        type: "object",
-        properties: {
-          url: { type: "string", description: "URL to perform POST operation" },
-          value: { type: "string", description: "Data to post in the body" },
-          token: { type: "string", description: "Bearer token for authorization" },
-          headers: { 
-            type: "object", 
-            description: "Additional headers to include in the request",
-            additionalProperties: { type: "string" }
-          }
-        },
-        required: ["url", "value"],
-      },
+      inputSchema: z.object({
+        url: z.string().describe("URL to perform POST operation"),
+        value: z.string().describe("Data to post in the body"),
+        token: z.string().describe("Bearer token for authorization").optional(),
+        headers: z.record(z.string()).describe("Additional headers to include in the request").optional()
+      })
     },
     {
       name: "playwright_put",
       description: "Perform an HTTP PUT request",
-      inputSchema: {
-        type: "object",
-        properties: {
-          url: { type: "string", description: "URL to perform PUT operation" },
-          value: { type: "string", description: "Data to PUT in the body" },
-        },
-        required: ["url", "value"],
-      },
+      inputSchema: z.object({
+        url: z.string().describe("URL to perform PUT operation"),
+        value: z.string().describe("Data to PUT in the body")
+      })
     },
     {
       name: "playwright_patch",
       description: "Perform an HTTP PATCH request",
-      inputSchema: {
-        type: "object",
-        properties: {
-          url: { type: "string", description: "URL to perform PUT operation" },
-          value: { type: "string", description: "Data to PATCH in the body" },
-        },
-        required: ["url", "value"],
-      },
+      inputSchema: z.object({
+        url: z.string().describe("URL to perform PUT operation"),
+        value: z.string().describe("Data to PATCH in the body")
+      })
     },
     {
       name: "playwright_delete",
       description: "Perform an HTTP DELETE request",
-      inputSchema: {
-        type: "object",
-        properties: {
-          url: { type: "string", description: "URL to perform DELETE operation" }
-        },
-        required: ["url"],
-      },
+      inputSchema: z.object({
+        url: z.string().describe("URL to perform DELETE operation")
+      })
     },
     {
       name: "playwright_expect_response",
       description: "Ask Playwright to start waiting for a HTTP response. This tool initiates the wait operation but does not wait for its completion.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          id: { type: "string", description: "Unique & arbitrary identifier to be used for retrieving this response later with `Playwright_assert_response`." },
-          url: { type: "string", description: "URL pattern to match in the response." }
-        },
-        required: ["id", "url"],
-      },
+      inputSchema: z.object({
+        id: z.string().describe("Unique & arbitrary identifier to be used for retrieving this response later with `Playwright_assert_response`."),
+        url: z.string().describe("URL pattern to match in the response.")
+      })
     },
     {
       name: "playwright_assert_response",
       description: "Wait for and validate a previously initiated HTTP response wait operation.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          id: { type: "string", description: "Identifier of the HTTP response initially expected using `Playwright_expect_response`." },
-          value: { type: "string", description: "Data to expect in the body of the HTTP response. If provided, the assertion will fail if this value is not found in the response body." }
-        },
-        required: ["id"],
-      },
+      inputSchema: z.object({
+        id: z.string().describe("Identifier of the HTTP response initially expected using `Playwright_expect_response`."),
+        value: z.string().describe("Data to expect in the body of the HTTP response. If provided, the assertion will fail if this value is not found in the response body.").optional()
+      })
     },
     {
       name: "playwright_custom_user_agent",
       description: "Set a custom User Agent for the browser",
-      inputSchema: {
-        type: "object",
-        properties: {
-          userAgent: { type: "string", description: "Custom User Agent for the Playwright browser instance" }
-        },
-        required: ["userAgent"],
-      },
+      inputSchema: z.object({
+        userAgent: z.string().describe("Custom User Agent for the Playwright browser instance")
+      })
     },
     {
       name: "playwright_get_visible_text",
       description: "Get the visible text content of the current page",
-      inputSchema: {
-        type: "object",
-        properties: {},
-        required: [],
-      },
+      inputSchema: z.object({})
     },
     {
       name: "playwright_get_visible_html",
       description: "Get the HTML content of the current page. By default, all <script> tags are removed from the output unless removeScripts is explicitly set to false.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          selector: { type: "string", description: "CSS selector to limit the HTML to a specific container" },
-          removeScripts: { type: "boolean", description: "Remove all script tags from the HTML (default: true)" },
-          removeComments: { type: "boolean", description: "Remove all HTML comments (default: false)" },
-          removeStyles: { type: "boolean", description: "Remove all style tags from the HTML (default: false)" },
-          removeMeta: { type: "boolean", description: "Remove all meta tags from the HTML (default: false)" },
-          cleanHtml: { type: "boolean", description: "Perform comprehensive HTML cleaning (default: false)" },
-          minify: { type: "boolean", description: "Minify the HTML output (default: false)" },
-          maxLength: { type: "number", description: "Maximum number of characters to return (default: 20000)" }
-        },
-        required: [],
-      },
+      inputSchema: z.object({
+        selector: z.string().describe("CSS selector to limit the HTML to a specific container").optional(),
+        removeScripts: z.boolean().describe("Remove all script tags from the HTML (default: true)").optional().default(true),
+        removeComments: z.boolean().describe("Remove all HTML comments (default: false)").optional().default(false),
+        removeStyles: z.boolean().describe("Remove all style tags from the HTML (default: false)").optional().default(false),
+        removeMeta: z.boolean().describe("Remove all meta tags from the HTML (default: false)").optional().default(false),
+        cleanHtml: z.boolean().describe("Perform comprehensive HTML cleaning (default: false)").optional().default(false),
+        minify: z.boolean().describe("Minify the HTML output (default: false)").optional().default(false),
+        maxLength: z.number().describe("Maximum number of characters to return (default: 20000)").optional().default(20000)
+      })
     },
     {
       name: "playwright_go_back",
       description: "Navigate back in browser history",
-      inputSchema: {
-        type: "object",
-        properties: {},
-        required: [],
-      },
+      inputSchema: z.object({})
     },
     {
       name: "playwright_go_forward",
       description: "Navigate forward in browser history",
-      inputSchema: {
-        type: "object",
-        properties: {},
-        required: [],
-      },
+      inputSchema: z.object({})
     },
     {
       name: "playwright_drag",
       description: "Drag an element to a target location",
-      inputSchema: {
-        type: "object",
-        properties: {
-          sourceSelector: { type: "string", description: "CSS selector for the element to drag" },
-          targetSelector: { type: "string", description: "CSS selector for the target location" }
-        },
-        required: ["sourceSelector", "targetSelector"],
-      },
+      inputSchema: z.object({
+        sourceSelector: z.string().describe("CSS selector for the element to drag"),
+        targetSelector: z.string().describe("CSS selector for the target location")
+      })
     },
     {
       name: "playwright_press_key",
       description: "Press a keyboard key",
-      inputSchema: {
-        type: "object",
-        properties: {
-          key: { type: "string", description: "Key to press (e.g. 'Enter', 'ArrowDown', 'a')" },
-          selector: { type: "string", description: "Optional CSS selector to focus before pressing key" }
-        },
-        required: ["key"],
-      },
+      inputSchema: z.object({
+        key: z.string().describe("Key to press (e.g. 'Enter', 'ArrowDown', 'a')"),
+        selector: z.string().describe("Optional CSS selector to focus before pressing key").optional()
+      })
     },
     {
       name: "playwright_save_as_pdf",
       description: "Save the current page as a PDF file",
-      inputSchema: {
-        type: "object",
-        properties: {
-          outputPath: { type: "string", description: "Directory path where PDF will be saved" },
-          filename: { type: "string", description: "Name of the PDF file (default: page.pdf)" },
-          format: { type: "string", description: "Page format (e.g. 'A4', 'Letter')" },
-          printBackground: { type: "boolean", description: "Whether to print background graphics" },
-          margin: {
-            type: "object",
-            description: "Page margins",
-            properties: {
-              top: { type: "string" },
-              right: { type: "string" },
-              bottom: { type: "string" },
-              left: { type: "string" }
-            }
-          }
-        },
-        required: ["outputPath"],
-      },
+      inputSchema: z.object({
+        outputPath: z.string().describe("Directory path where PDF will be saved"),
+        filename: z.string().describe("Name of the PDF file (default: page.pdf)").optional().default('page.pdf'),
+        format: z.string().describe("Page format (e.g. 'A4', 'Letter')").optional(),
+        printBackground: z.boolean().describe("Whether to print background graphics").optional().default(false),
+        margin: z.object({
+          top: z.string().optional(),
+          right: z.string().optional(),
+          bottom: z.string().optional(),
+          left: z.string().optional()
+        }).describe("Page margins").optional()
+      })
     },
     {
       name: "playwright_click_and_switch_tab",
       description: "Click a link and switch to the newly opened tab",
-      inputSchema: {
-        type: "object",
-        properties: {
-          selector: { type: "string", description: "CSS selector for the link to click" },
-        },
-        required: ["selector"],
-      },
+      inputSchema: z.object({
+        selector: z.string().describe("CSS selector for the link to click")
+      })
     },
     {
       name: "playwright_resize",
       description: "Resize the browser viewport to test responsive layouts without closing and reopening the browser",
-      inputSchema: {
-        type: "object",
-        properties: {
-          width: { type: "number", description: "New viewport width in pixels" },
-          height: { type: "number", description: "New viewport height in pixels" }
-        },
-        required: ["width", "height"],
-      },
+      inputSchema: z.object({
+        width: z.number().describe("New viewport width in pixels"),
+        height: z.number().describe("New viewport height in pixels")
+      })
     },
-  ] as const satisfies Tool[];
+  ] as const;
 }
 
 // Browser-requiring tools for conditional browser launch

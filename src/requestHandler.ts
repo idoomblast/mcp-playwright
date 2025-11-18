@@ -2,13 +2,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { 
   ListResourcesRequestSchema, 
   ReadResourceRequestSchema, 
-  ListToolsRequestSchema, 
-  CallToolRequestSchema,
-  Tool
 } from "@modelcontextprotocol/sdk/types.js";
-import { handleToolCall, getConsoleLogs, getScreenshots } from "./toolHandler.js";
+import { getConsoleLogs, getScreenshots } from "./toolHandler.js";
 
-export function setupRequestHandlers(server: McpServer, tools: Tool[]) {
+export function setupRequestHandlers(server: McpServer) {
   // List resources handler
   server.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: [
@@ -17,10 +14,10 @@ export function setupRequestHandlers(server: McpServer, tools: Tool[]) {
         mimeType: "text/plain",
         name: "Browser console logs",
       },
-      ...Array.from(getScreenshots().keys()).map(name => ({
-        uri: `screenshot://${name}`,
-        mimeType: "image/png",
-        name: `Screenshot: ${name}`,
+      ...getScreenshots().map((screenshot, index) => ({
+        uri: `screenshot://${index}`,
+        mimeType: screenshot.type === "image" ? screenshot.mimeType : "text/plain",
+        name: `Screenshot: ${index}`,
       })),
     ],
   }));
@@ -42,13 +39,15 @@ export function setupRequestHandlers(server: McpServer, tools: Tool[]) {
 
     if (uri.startsWith("screenshot://")) {
       const name = uri.split("://")[1];
-      const screenshot = getScreenshots().get(name);
-      if (screenshot) {
+      const index = Number(name);
+      const screenshots = getScreenshots();
+      const screenshot = screenshots[index];
+      if (screenshot && screenshot.type === "image") {
         return {
           contents: [{
             uri,
-            mimeType: "image/png",
-            blob: screenshot,
+            mimeType: screenshot.mimeType ?? "image/png",
+            blob: screenshot.data,
           }],
         };
       }
@@ -56,14 +55,4 @@ export function setupRequestHandlers(server: McpServer, tools: Tool[]) {
 
     throw new Error(`Resource not found: ${uri}`);
   });
-
-  // List tools handler
-  server.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: tools,
-  }));
-
-  // Call tool handler
-  server.server.setRequestHandler(CallToolRequestSchema, async (request) =>
-    handleToolCall(request.params.name, request.params.arguments ?? {}, server.server)
-  );
 }
