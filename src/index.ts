@@ -13,6 +13,7 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { randomUUID } from 'crypto';
 import { handleToolCall } from './toolHandler.js';
 
+const statefull: boolean = JSON.parse(process.env.STATEFULL) || false
 // Get port from environment variable or use default
 const port = parseInt(process.env.PORT) || 3000;
 
@@ -56,7 +57,10 @@ async function runServer() {
 
   // Handle MCP requests
   app.post('/mcp', (req, res) => {
-    const sessionId = req.headers['mcp-session-id'] as string | undefined;
+    let sessionId = req.headers['mcp-session-id'] as string | undefined;
+    if (!statefull) {
+      sessionId = 'stateless';
+    }
     
     let transport: StreamableHTTPServerTransport;
 
@@ -64,8 +68,11 @@ async function runServer() {
       transport = transports[sessionId];
     } else if (!sessionId && isInitializeRequest(req.body)) {
       transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => randomUUID(),
+        sessionIdGenerator: () => statefull ? randomUUID() : 'stateless',
         onsessioninitialized: (sessionId) => {
+          if(!statefull) {
+            sessionId = 'statefull'
+          }
           transports[sessionId as string] = transport;
         },
       });
@@ -111,7 +118,10 @@ async function runServer() {
   });
 
   const handleSessionRequest = async (req: express.Request, res: express.Response) => {
-    const sessionId = req.headers['mcp-session-id'] as string | undefined;
+    let sessionId = req.headers['mcp-session-id'] as string | undefined;
+    if (!statefull) {
+      sessionId = 'stateless';
+    }
     if (!sessionId || !transports[sessionId]) {
       res.status(400).send('Invalid or missing session ID')
       return
