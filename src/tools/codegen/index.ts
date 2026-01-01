@@ -5,6 +5,7 @@ import { CodegenOptions } from './types.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import type { Browser, Page } from 'playwright';
+import { z } from 'zod';
 
 declare global {
   var browser: Browser | undefined;
@@ -25,20 +26,13 @@ const DEFAULT_OPTIONS: Required<CodegenOptions> = {
 export const startCodegenSession: Tool = {
   name: 'start_codegen_session',
   description: 'Start a new code generation session to record MCP tool actions',
-  parameters: {
-    type: 'object',
-    properties: {
-      options: {
-        type: 'object',
-        description: 'Code generation options',
-        properties: {
-          outputPath: { type: 'string' },
-          testNamePrefix: { type: 'string' },
-          includeComments: { type: 'boolean' }
-        }
-      }
-    }
-  },
+  inputSchema: z.object({
+    options: z.object({
+      outputPath: z.string().optional(),
+      testNamePrefix: z.string().optional(),
+      includeComments: z.boolean().optional()
+    }).optional()
+  }),
   handler: async ({ options = {} }: { options?: CodegenOptions }) => {
     try {
       // Merge provided options with defaults
@@ -82,16 +76,9 @@ export const startCodegenSession: Tool = {
 export const endCodegenSession: Tool = {
   name: 'end_codegen_session',
   description: 'End the current code generation session and generate Playwright test',
-  parameters: {
-    type: 'object',
-    properties: {
-      sessionId: {
-        type: 'string',
-        description: 'ID of the session to end'
-      }
-    },
-    required: ['sessionId']
-  },
+  inputSchema: z.object({
+    sessionId: z.string()
+  }),
   handler: async ({ sessionId }: { sessionId: string }) => {
     try {
       const recorder = ActionRecorder.getInstance();
@@ -160,16 +147,9 @@ export const endCodegenSession: Tool = {
 export const getCodegenSession: Tool = {
   name: 'get_codegen_session',
   description: 'Get information about a code generation session',
-  parameters: {
-    type: 'object',
-    properties: {
-      sessionId: {
-        type: 'string',
-        description: 'ID of the session to retrieve'
-      }
-    },
-    required: ['sessionId']
-  },
+  inputSchema: z.object({
+    sessionId: z.string()
+  }),
   handler: async ({ sessionId }: { sessionId: string }) => {
     const session = ActionRecorder.getInstance().getSession(sessionId);
     if (!session) {
@@ -179,19 +159,14 @@ export const getCodegenSession: Tool = {
   }
 };
 
+
+
 export const clearCodegenSession: Tool = {
   name: 'clear_codegen_session',
   description: 'Clear a code generation session',
-  parameters: {
-    type: 'object',
-    properties: {
-      sessionId: {
-        type: 'string',
-        description: 'ID of the session to clear'
-      }
-    },
-    required: ['sessionId']
-  },
+  inputSchema: z.object({
+    sessionId: z.string()
+  }),
   handler: async ({ sessionId }: { sessionId: string }) => {
     const success = ActionRecorder.getInstance().clearSession(sessionId);
     if (!success) {
@@ -206,4 +181,9 @@ export const codegenTools = [
   endCodegenSession,
   getCodegenSession,
   clearCodegenSession
-]; 
+];
+
+
+
+
+

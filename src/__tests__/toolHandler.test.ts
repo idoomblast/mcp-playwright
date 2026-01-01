@@ -1,6 +1,14 @@
 import { handleToolCall, getConsoleLogs, getScreenshots, registerConsoleMessage } from '../toolHandler.js';
 import { Browser, Page, chromium, firefox, webkit } from 'playwright';
 import { jest } from '@jest/globals';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+
+// Mock the McpServer
+const mockServer = {
+  server: {
+    sendProgress: jest.fn(),
+  },
+} as unknown as McpServer;
 
 // Mock the Playwright browser and page
 jest.mock('playwright', () => {
@@ -156,10 +164,7 @@ jest.mock('playwright', () => {
 });
 
 // Mock server
-const mockServer = {
-  sendMessage: jest.fn(),
-  notification: jest.fn()
-};
+
 
 // Don't try to mock the module itself - this causes TypeScript errors
 // Instead, we'll update our expectations to match the actual implementation
@@ -172,7 +177,7 @@ describe('Tool Handler', () => {
   test('handleToolCall should handle unknown tool', async () => {
     const result = await handleToolCall('unknown_tool', {}, mockServer);
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('Unknown tool');
+    expect((result.content[0] as { text: string }).text).toContain('Unknown tool');
   });
 
   // In the actual implementation, the tools might succeed or fail depending on how the mocks are set up
@@ -293,9 +298,14 @@ describe('Tool Handler', () => {
     expect(Array.isArray(logs)).toBe(true);
   });
 
-  test('getScreenshots should return screenshots map', () => {
+  test('getScreenshots should return map of ImageContent or TextContent', () => {
     const screenshots = getScreenshots();
-    expect(screenshots instanceof Map).toBe(true);
+    expect(Array.isArray(screenshots)).toBe(true);
+    expect(screenshots.length).toBeGreaterThanOrEqual(0);
+    screenshots.forEach((s: any) => {
+      expect(typeof s).toBe('object');
+      expect(['image', 'text']).toContain(s.type);
+    });
   });
 
   describe('registerConsoleMessage', () => {
@@ -386,7 +396,7 @@ describe('Tool Handler', () => {
     // A more direct test would require exporting ensureBrowser and spying on it.
     // For now, we will just check if the tool call succeeds.
     const result = await handleToolCall('playwright_navigate', { url: 'about:blank' }, mockServer);
-    expect(result.content[0].text).toContain('Navigated to');
+    expect((result.content[0] as { text: string }).text).toContain('Navigated to');
 
     // Clean up
     delete process.env.CHROME_EXECUTABLE_PATH;

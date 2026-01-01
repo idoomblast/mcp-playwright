@@ -3,15 +3,15 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import type { Page } from 'playwright';
 import { BrowserToolBase } from './base.js';
-import { ToolContext, ToolResponse, createSuccessResponse } from '../common/types.js';
-
+import { ToolContext, ToolResponse } from '../common/types.js';
+import type { TextContent, ImageContent } from '@modelcontextprotocol/sdk/types.js';
 const defaultDownloadsPath = path.join(os.homedir(), 'Downloads');
 
 /**
  * Tool for taking screenshots of pages or elements
  */
 export class ScreenshotTool extends BrowserToolBase {
-  private screenshots = new Map<string, string>();
+  private screenshots: (TextContent | ImageContent)[] = [];
 
   /**
    * Execute the screenshot tool
@@ -46,32 +46,39 @@ export class ScreenshotTool extends BrowserToolBase {
         fs.mkdirSync(downloadsDir, { recursive: true });
       }
 
-      const outputPath = path.join(downloadsDir, filename);
-      screenshotOptions.path = outputPath;
-
       const screenshot = await page.screenshot(screenshotOptions);
       const base64Screenshot = screenshot.toString('base64');
-
-      const messages = [`Screenshot saved to: ${path.relative(process.cwd(), outputPath)}`];
-
-      // Handle base64 storage
-      if (args.storeBase64 !== false) {
-        this.screenshots.set(args.name || 'screenshot', base64Screenshot);
-        this.server.notification({
-          method: "notifications/resources/list_changed",
-        });
-
-        messages.push(`Screenshot also stored in memory with name: '${args.name || 'screenshot'}'`);
-      }
-
-      return createSuccessResponse(messages);
+      const content = {
+          type: "image",
+          data: `${base64Screenshot}`,
+          mimeType: "image/png",
+          metadata: {
+            name: filename || 'screenshot',
+            description: `${filename} taken at ${new Date().toISOString()}`,
+            source: "screenshot_tool",
+            encoding: "base64"
+          }
+        } as ImageContent;
+      this.screenshots.push(content);
+      this.server.notification({
+        method: "notifications/resources/list_changed",
+      });
+      //return createSuccessResponse(`base64image: "data:image/png;base64,${base64Screenshot}"`);
+      const message: TextContent = {
+        type: "text",
+        text: `Screenshot taken: ${filename}`,
+      };
+      return {
+        content: [message,content],
+        isError: false
+      };
     });
   }
 
   /**
    * Get all stored screenshots
    */
-  getScreenshots(): Map<string, string> {
+  getScreenshots(): (TextContent | ImageContent)[] {
     return this.screenshots;
   }
 } 

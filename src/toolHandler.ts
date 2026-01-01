@@ -1,6 +1,6 @@
 import type { Browser, Page } from 'playwright';
 import { chromium, firefox, webkit, request } from 'playwright';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult, ImageContent, TextContent } from '@modelcontextprotocol/sdk/types.js';
 import { BROWSER_TOOLS, API_TOOLS } from './tools.js';
 import type { ToolContext } from './tools/common/types.js';
 import { ActionRecorder } from './tools/codegen/recorder.js';
@@ -46,6 +46,7 @@ import { GoBackTool, GoForwardTool } from './tools/browser/navigation.js';
 import { DragTool, PressKeyTool } from './tools/browser/interaction.js';
 import { SaveAsPdfTool } from './tools/browser/output.js';
 import { ClickAndSwitchTabTool } from './tools/browser/interaction.js';
+import { z } from 'zod';
 
 // Global state
 let browser: Browser | undefined;
@@ -115,7 +116,7 @@ interface BrowserSettings {
   headless?: boolean;
   browserType?: 'chromium' | 'firefox' | 'webkit';
   proxy?: {
-    server: string;
+    server?: string;
     username?: string;
     password?: string;
   };
@@ -188,7 +189,7 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
 
     // Launch new browser if needed
     if (!browser) {
-      const { viewport, userAgent, headless = false, browserType = 'chromium', proxy, acceptInsecureCerts, ignoreHTTPSErrors, userDataDir } = browserSettings ?? {};
+      const { viewport, userAgent, headless = false, browserType = 'chromium', proxy , acceptInsecureCerts, ignoreHTTPSErrors, userDataDir } = browserSettings ?? {};
       
       // If browser type is changing, force a new browser instance
       if (browser && currentBrowserType !== browserType) {
@@ -224,7 +225,7 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
         const context = await browserInstance.launchPersistentContext(userDataDir, {
           headless,
           executablePath: executablePath,
-          ...(proxy && { proxy }),
+          ...(proxy && proxy.server && { proxy }),
           ...(acceptInsecureCerts !== undefined && { acceptInsecureCerts }),
           ...userAgent && { userAgent },
           viewport: {
@@ -246,7 +247,7 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
         browser = await browserInstance.launch({
           headless,
           executablePath: executablePath,
-          ...(proxy && { proxy }),
+          ...(proxy && proxy.server && { proxy }),
           ...(acceptInsecureCerts && { acceptInsecureCerts })
         });
         
@@ -325,7 +326,7 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
       const context = await browserInstance.launchPersistentContext(userDataDir, {
         headless,
         executablePath: executablePath,
-        ...(proxy && { proxy }),
+        ...(proxy && proxy.server && { proxy }),
         ...(acceptInsecureCerts !== undefined && { acceptInsecureCerts }),
         ...userAgent && { userAgent },
         viewport: {
@@ -348,7 +349,7 @@ export async function ensureBrowser(browserSettings?: BrowserSettings) {
       browser = await browserInstance.launch({ 
         headless,
         executablePath: executablePath,
-        ...(proxy && { proxy }),
+        ...(proxy && proxy.server && { proxy }),
         ...(acceptInsecureCerts && { acceptInsecureCerts })
       });
       
@@ -439,7 +440,6 @@ export async function handleToolCall(
 ): Promise<CallToolResult> {
   // Initialize tools
   initializeTools(server);
-
   try {
     // Handle codegen tools
     switch (name) {
@@ -504,7 +504,7 @@ export async function handleToolCall(
   const context: ToolContext = {
     server
   };
-  
+
   // Set up browser if needed
   if (BROWSER_TOOLS.includes(name)) {
     const browserSettings = {
@@ -719,8 +719,24 @@ export function getConsoleLogs(): string[] {
 /**
  * Get screenshots
  */
-export function getScreenshots(): Map<string, string> {
-  return screenshotTool?.getScreenshots() ?? new Map();
+export function getScreenshots(): (TextContent | ImageContent)[] {
+  const screenshots = screenshotTool?.getScreenshots();
+
+  if (!screenshots) {
+    return [];
+  }
+
+  // If the tool returns an array already, return it
+  if (Array.isArray(screenshots)) {
+    return screenshots;
+  }
+
+  // Fallback: if it's some other iterable, convert to array; otherwise return empty
+  try {
+    return Array.from(screenshots as Iterable<TextContent | ImageContent>);
+  } catch {
+    return [];
+  }
 }
 
 export { registerConsoleMessage };

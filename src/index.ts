@@ -1,74 +1,138 @@
 #!/usr/bin/env node
 
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ quiet: true });
 
-import { randomUUID } from 'crypto';
 import express from 'express';
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import cors from 'cors';
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createToolDefinitions } from "./tools.js";
 import { setupRequestHandlers } from "./requestHandler.js";
+import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
+import { randomUUID } from 'crypto';
+import { handleToolCall } from './toolHandler.js';
 
+const statefull: boolean = JSON.parse(process.env.STATEFULL) || false
 // Get port from environment variable or use default
 const port = parseInt(process.env.PORT) || 3000;
 
 async function runServer() {
-  const server = new Server(
-    {
-      name: "playwright-mcp",
-      version: "1.0.6",
-    },
-    {
-      capabilities: {
-        resources: {},
-        tools: {},
-      },
-    }
-  );
-
   // Create tool definitions
   const TOOLS = createToolDefinitions();
 
-  // Setup request handlers
-  setupRequestHandlers(server, TOOLS);
-
-  // Create HTTP transport
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined, // Stateless mode
-    enableJsonResponse: true, // Use direct JSON responses
-  });
+  const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
 
   // Create Express app
   const app = express();
-
+  app.use(
+    cors({
+      origin: '*', // Configure appropriately for production, for example:
+      // origin: ['https://your-remote-domain.com', 'https://your-other-remote-domain.com'],
+      exposedHeaders: ['mcp-session-id'],
+      allowedHeaders: ['Content-Type', 'mcp-session-id']
+    })
+  );
   // Middleware to parse JSON
   app.use(express.json());
 
   // Authentication middleware
-  app.use('/mcp', (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Unauthorized: Missing or invalid Bearer token' });
-    }
-    const token = authHeader.substring(7); // Remove 'Bearer '
-    // For simplicity, check against a hardcoded token (in production, verify JWT or database)
-    const expectedToken = process.env.MCP_BEARER_TOKEN || 'default-token';
-    if (token !== expectedToken) {
-      return res.status(401).json({ error: 'Unauthorized: Invalid token' });
-    }
-    // Attach auth info to request
-    (req as any).authInfo = { token };
-    next();
-  });
+  if (process.env.MCP_BEARER_TOKEN) {
+    app.use('/mcp', (req, res, next) => {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized: Missing or invalid Bearer token' });
+      }
+      const token = authHeader.substring(7); // Remove 'Bearer '
+      // For simplicity, check against a hardcoded token (in production, verify JWT or database)
+      const expectedToken = process.env.MCP_BEARER_TOKEN || 'default-token';
+      if (token !== expectedToken) {
+        return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+      }
+      // Attach auth info to requestnpm 
+      (req as any).authInfo = { token };
+      next();
+    });
+  }
 
   // Handle MCP requests
-  app.use('/mcp', async (req, res) => {
-    await transport.handleRequest(req, res, req.body);
+  app.post('/mcp', (req, res) => {
+    let sessionId = req.headers['mcp-session-id'] as string | undefined;
+    if (!statefull) {
+      sessionId = 'stateless';
+    }
+    
+    let transport: StreamableHTTPServerTransport;
+
+    if (sessionId && transports[sessionId]) {
+      transport = transports[sessionId];
+    } else if (!sessionId && isInitializeRequest(req.body)) {
+      transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => statefull ? randomUUID() : 'stateless',
+        onsessioninitialized: (sessionId) => {
+          if(!statefull) {
+            sessionId = 'statefull'
+          }
+          transports[sessionId as string] = transport;
+        },
+      });
+      transport.onclose = () => {
+        if (transport.sessionId) {
+          console.log('hapus session')
+          delete transports[transport.sessionId];
+        }
+      };
+
+      const server = new McpServer({
+        name: "browser",
+        version: "1.0.0"
+      }, {
+        capabilities: {
+          tools: {},
+          resources: {}
+        }
+      });
+
+      // Register tools
+      for (const tool of TOOLS) {
+        server.registerTool(
+          tool.name,
+          {
+            description: tool.description,
+            inputSchema: tool.inputSchema,
+          },
+          (args: any) => handleToolCall(tool.name, args, server)
+        );
+      }
+
+      // Setup request handlers
+      setupRequestHandlers(server);
+
+      server.connect(transport);
+    } else {
+      res.status(400).json({ error: 'Bad request: Invalid session or initialization.' });
+      return;
+    }
+
+    transport.handleRequest(req, res, req.body);
   });
 
-  // Connect server to transport
-  await server.connect(transport);
+  const handleSessionRequest = async (req: express.Request, res: express.Response) => {
+    let sessionId = req.headers['mcp-session-id'] as string | undefined;
+    if (!statefull) {
+      sessionId = 'stateless';
+    }
+    if (!sessionId || !transports[sessionId]) {
+      res.status(400).send('Invalid or missing session ID')
+      return
+    }
+    const transport = transports[sessionId]
+    await transport.handleRequest(req, res)
+  }
+
+  app.get('/mcp', handleSessionRequest)
+  
+  app.delete('/mcp', handleSessionRequest)
 
   // Graceful shutdown logic
   function shutdown() {

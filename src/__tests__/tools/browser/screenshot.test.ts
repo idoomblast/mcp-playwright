@@ -92,7 +92,9 @@ describe('ScreenshotTool', () => {
     
     // Check that the result contains success message
     expect(result.isError).toBe(false);
-    expect(result.content[0].text).toContain('Screenshot saved to');
+    expect((result.content[0] as { text: string }).text).toContain('Screenshot taken');
+    expect((result.content[1] as { type: string }).type).toBe('image');
+    expect((result.content[1] as any).data).toBe('bW9jay1zY3JlZW5zaG90');
   });
 
   test('should handle element screenshot', async () => {
@@ -107,9 +109,11 @@ describe('ScreenshotTool', () => {
 
     const result = await screenshotTool.execute(args, mockContext);
 
-    // Check that the result contains success message
+    // Check that the result data contains the element screenshot
     expect(result.isError).toBe(false);
-    expect(result.content[0].text).toContain('Screenshot saved to');
+    expect((result.content[0] as { text: string }).text).toContain('Screenshot taken');
+    expect((result.content[1] as { type: string }).type).toBe('image');
+    expect((result.content[1] as any).data).toBe('bW9jay1zY3JlZW5zaG90');
   });
 
   test('should handle screenshot errors', async () => {
@@ -124,7 +128,7 @@ describe('ScreenshotTool', () => {
 
     expect(mockScreenshot).toHaveBeenCalled();
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('Operation failed');
+    expect((result.content[0] as { text: string }).text).toContain('Operation failed');
   });
 
   test('should handle missing page', async () => {
@@ -142,10 +146,10 @@ describe('ScreenshotTool', () => {
 
     expect(mockScreenshot).not.toHaveBeenCalled();
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('Browser page not initialized');
+    expect((result.content[0] as { text: string }).text).toContain('Browser page not initialized');
   });
 
-  test('should store screenshots in a map', async () => {
+  test('should store screenshots in a collection', async () => {
     const args = {
       name: 'test-screenshot',
       storeBase64: true
@@ -157,9 +161,10 @@ describe('ScreenshotTool', () => {
 
     await screenshotTool.execute(args, mockContext);
     
-    // Check that the screenshot was stored in the map
+    // Check that the screenshot was stored in the screenshots collection
     const screenshots = screenshotTool.getScreenshots();
-    expect(screenshots.has('test-screenshot')).toBe(true);
+    expect(Array.isArray(screenshots)).toBe(true);
+    expect(screenshots.some(s => (s as any).type === 'image' && (s as any).data === 'bW9jay1zY3JlZW5zaG90')).toBe(true);
   });
 
   test('should take a screenshot with specific browser type', async () => {
@@ -173,6 +178,9 @@ describe('ScreenshotTool', () => {
     
     expect(mockScreenshot).toHaveBeenCalled();
     expect(result.isError).toBe(false);
-    expect(result.content[0].text).toContain('Screenshot saved to');
+    expect((result.content[0] as { type: string }).type).toContain('text');
+    expect((result.content[0] as { text: string }).text).toContain('Screenshot taken');
+    expect((result.content[1] as { type: string }).type).toBe('image');
+    
   });
 }); 

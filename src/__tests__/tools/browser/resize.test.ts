@@ -55,7 +55,7 @@ describe('ResizeTool', () => {
       height: 1080
     });
     expect(result.isError).toBe(false);
-    expect(result.content[0].text).toContain('Viewport resized to 1920x1080 pixels');
+    expect((result.content[0] as { text: string }).text).toContain('Viewport resized to 1920x1080 pixels');
   });
 
   test('should handle mobile viewport size', async () => {
@@ -71,7 +71,7 @@ describe('ResizeTool', () => {
       height: 667
     });
     expect(result.isError).toBe(false);
-    expect(result.content[0].text).toContain('Viewport resized to 375x667 pixels');
+    expect((result.content[0] as { text: string }).text).toContain('Viewport resized to 375x667 pixels');
   });
 
   test('should handle tablet viewport size', async () => {
@@ -87,7 +87,7 @@ describe('ResizeTool', () => {
       height: 1024
     });
     expect(result.isError).toBe(false);
-    expect(result.content[0].text).toContain('Viewport resized to 768x1024 pixels');
+    expect((result.content[0] as { text: string }).text).toContain('Viewport resized to 768x1024 pixels');
   });
 
   test('should reject invalid width', async () => {
@@ -100,7 +100,7 @@ describe('ResizeTool', () => {
 
     expect(mockSetViewportSize).not.toHaveBeenCalled();
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('Width must be a positive number');
+    expect((result.content[0] as { text: string }).text).toContain('Width must be a positive number');
   });
 
   test('should reject invalid height', async () => {
@@ -113,7 +113,7 @@ describe('ResizeTool', () => {
 
     expect(mockSetViewportSize).not.toHaveBeenCalled();
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('Height must be a positive number');
+    expect((result.content[0] as { text: string }).text).toContain('Height must be a positive number');
   });
 
   test('should reject non-numeric width', async () => {
@@ -126,7 +126,7 @@ describe('ResizeTool', () => {
 
     expect(mockSetViewportSize).not.toHaveBeenCalled();
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('Width must be a positive number');
+    expect((result.content[0] as { text: string }).text).toContain('Width must be a positive number');
   });
 
   test('should reject non-numeric height', async () => {
@@ -139,7 +139,7 @@ describe('ResizeTool', () => {
 
     expect(mockSetViewportSize).not.toHaveBeenCalled();
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('Height must be a positive number');
+    expect((result.content[0] as { text: string }).text).toContain('Height must be a positive number');
   });
 
   test('should handle resize errors', async () => {
@@ -158,6 +158,6 @@ describe('ResizeTool', () => {
       height: 1080
     });
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('Failed to resize viewport: Resize failed');
+    expect((result.content[0] as { text: string }).text).toContain('Failed to resize viewport: Resize failed');
   });
 });

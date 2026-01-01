@@ -1,13 +1,10 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
 
 export interface Tool {
   name: string;
   description: string;
-  parameters: {
-    type: string;
-    properties: Record<string, unknown>;
-    required?: string[];
-  };
+  inputSchema: z.ZodObject<any>;
   handler: (args: any) => Promise<any>;
 }
 

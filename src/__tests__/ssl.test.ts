@@ -111,8 +111,8 @@ describe('SSL/TLS Configuration', () => {
 
       expect(mockBrowser.newContext).toHaveBeenCalledWith({
         viewport: {
-          width: 1280,
-          height: 720,
+          width: 1600,
+          height: 900,
         },
         deviceScaleFactor: 1,
         ignoreHTTPSErrors: true,
@@ -128,8 +128,8 @@ describe('SSL/TLS Configuration', () => {
 
       expect(mockBrowser.newContext).toHaveBeenCalledWith({
         viewport: {
-          width: 1280,
-          height: 720,
+          width: 1600,
+          height: 900,
         },
         deviceScaleFactor: 1,
         ignoreHTTPSErrors: false,
@@ -154,8 +154,8 @@ describe('SSL/TLS Configuration', () => {
 
       expect(mockBrowser.newContext).toHaveBeenCalledWith({
         viewport: {
-          width: 1280,
-          height: 720,
+          width: 1600,
+          height: 900,
         },
         deviceScaleFactor: 1,
         ignoreHTTPSErrors: true,
@@ -186,8 +186,8 @@ describe('SSL/TLS Configuration', () => {
 
       expect(mockBrowser.newContext).toHaveBeenCalledWith({
         viewport: {
-          width: 1280,
-          height: 720,
+          width: 1600,
+          height: 900,
         },
         deviceScaleFactor: 1,
         ignoreHTTPSErrors: true,
@@ -209,8 +209,8 @@ describe('SSL/TLS Configuration', () => {
 
       expect(mockBrowser.newContext).toHaveBeenCalledWith({
         viewport: {
-          width: 1280,
-          height: 720,
+          width: 1600,
+          height: 900,
         },
         deviceScaleFactor: 1,
         ignoreHTTPSErrors: false,
