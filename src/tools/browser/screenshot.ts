@@ -60,9 +60,6 @@ export class ScreenshotTool extends BrowserToolBase {
           }
         } as ImageContent;
       this.screenshots.push(content);
-      this.server.notification({
-        method: "notifications/resources/list_changed",
-      });
       //return createSuccessResponse(`base64image: "data:image/png;base64,${base64Screenshot}"`);
       const message: TextContent = {
         type: "text",
