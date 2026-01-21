@@ -4,42 +4,9 @@ import { codegenTools } from './tools/codegen';
 
 export function createToolDefinitions() {
   return [
-    // Codegen tools
-    {
-      name: "start_codegen_session",
-      description: "Start a new code generation session to record Playwright actions",
-      inputSchema: z.object({
-        options: z.object({
-          outputPath: z.string().describe("Directory path where generated tests will be saved (use absolute path)"),
-          testNamePrefix: z.string().describe("Prefix to use for generated test names (default: 'GeneratedTest')").optional().default('GeneratedTest'),
-          includeComments: z.boolean().describe("Whether to include descriptive comments in generated tests").optional().default(false)
-        }).describe("Code generation options")
-      })
-    },
-    {
-      name: "end_codegen_session",
-      description: "End a code generation session and generate the test file",
-      inputSchema: z.object({
-        sessionId: z.string().describe("ID of the session to end")
-      })
-    },
-    {
-      name: "get_codegen_session",
-      description: "Get information about a code generation session",
-      inputSchema: z.object({
-        sessionId: z.string().describe("ID of the session to retrieve")
-      })
-    },
-    {
-      name: "clear_codegen_session",
-      description: "Clear a code generation session without generating a test",
-      inputSchema: z.object({
-        sessionId: z.string().describe("ID of the session to clear")
-      })
-    },
     {
       name: "playwright_navigate",
-      description: "Navigate to a URL",
+      description: "Navigate to a URL. ⚠️ CRITICAL: After navigating, NEVER assume what's on the page. ALWAYS use `playwright_get_visible_text` or `playwright_get_visible_html` immediately to view the ACTUAL page content. Without reading the content, you will be unable to perform accurate actions on the page. The browser will NOT output content automatically - you must explicitly request it.",
       inputSchema: z.object({
         url: z.string().describe("URL to navigate to the website specified"),
         browserType: z.enum(["chromium", "firefox", "webkit"]).describe("Browser type to use (chromium, firefox, webkit). Defaults to chromium").optional().default('chromium'),
@@ -60,7 +27,7 @@ export function createToolDefinitions() {
     },
     {
       name: "playwright_screenshot",
-      description: "Take a screenshot of the current page or a specific element",
+      description: "Take a screenshot of the current page or a specific element. Use this for visual testing, debugging layout issues, documenting test results, or capturing page states. Useful for: regression testing, cross-browser comparison, responsive layout verification, and providing visual evidence of test failures.",
       inputSchema: z.object({
         name: z.string().describe("Name for the screenshot"),
         selector: z.string().describe("CSS selector for element to screenshot").optional(),
@@ -71,7 +38,7 @@ export function createToolDefinitions() {
     },
     {
       name: "playwright_click",
-      description: "Click an element on the page",
+      description: "Click an element on the page. ⚠️ CRITICAL: After clicking, ALWAYS use `playwright_get_visible_text` or `playwright_get_visible_html` to view the ACTUAL updated page content. Never assume what happened or what content changed - you MUST read the page to confirm the action's effect.",
       inputSchema: z.object({
         selector: z.string().describe("CSS selector for the element to click")
       })
@@ -118,7 +85,7 @@ export function createToolDefinitions() {
     },
     {
       name: "playwright_upload_file",
-      description: "Upload a file to an input[type='file'] element on the page",
+      description: "Upload a file to an input[type='file'] element on the page. IMPORTANT: The filePath parameter requires an ABSOLUTE path to the file that exists on the system. Use this for automating file upload processes in forms, testing file upload functionality, or validating file validation logic. Common use cases: profile picture uploads, document submission, attachment testing.",
       inputSchema: z.object({
         selector: z.string().describe("CSS selector for the file input element"),
         filePath: z.string().describe("Absolute path to the file to upload")
@@ -126,14 +93,14 @@ export function createToolDefinitions() {
     },
     {
       name: "playwright_evaluate",
-      description: "Execute JavaScript in the browser console",
+      description: "⚠️ DEVELOPMENT ONLY: Execute JavaScript in the browser console. This tool is strictly for debugging and development purposes only. Real-world applications and end users will NEVER use this tool. It should ONLY be used during the development phase for testing and debugging purposes. If you need to view page content, use `playwright_get_visible_text` or `playwright_get_visible_html` instead.",
       inputSchema: z.object({
         script: z.string().describe("JavaScript code to execute")
       })
     },
     {
       name: "playwright_console_logs",
-      description: "Retrieve console logs from the browser with filtering options",
+      description: "⚠️ DEVELOPMENT ONLY: Retrieve console logs from the browser with filtering options. This tool is strictly for debugging and development purposes only. Real-world applications and end users will NEVER use this tool. It should ONLY be used during the development phase for testing, debugging JavaScript errors, and monitoring browser console output.",
       inputSchema: z.object({
         type: z.enum(["all", "error", "warning", "log", "info", "debug", "exception"]).describe("Type of logs to retrieve (all, error, warning, log, info, debug, exception)").optional().default('all'),
         search: z.string().describe("Text to search for in logs (handles text with square brackets)").optional(),
@@ -143,7 +110,7 @@ export function createToolDefinitions() {
     },
     {
       name: "playwright_network_inspection",
-      description: "Monitor and inspect network traffic in the browser",
+      description: "⚠️ DEVELOPMENT ONLY: Monitor and inspect network traffic in the browser. This tool is strictly for debugging and development purposes only. Real-world applications and end users will NEVER use this tool. It should ONLY be used during the development phase for testing, debugging API calls, monitoring network requests/responses, and analyzing performance issues.",
       inputSchema: z.object({
         action: z.enum(["start", "stop", "get", "clear"]).describe("Action to perform (start, stop, get, clear)").optional(),
         filter: z.object({
@@ -165,14 +132,14 @@ export function createToolDefinitions() {
     },
     {
       name: "playwright_get",
-      description: "Perform an HTTP GET request",
+      description: "Perform an HTTP GET request DIRECTLY without browser. ⚠️ NOTE: This makes a DIRECT HTTP request like curl or Postman - does NOT require a browser session. Use this for testing APIs directly, fetching data, or making HTTP requests. If you need to test HTTP responses TRIGGERED by browser UI actions (click, form submit, etc.), use `playwright_expect_response` + `playwright_assert_response` instead.",
       inputSchema: z.object({
         url: z.string().describe("URL to perform GET operation")
       })
     },
     {
       name: "playwright_post",
-      description: "Perform an HTTP POST request",
+      description: "Perform an HTTP POST request DIRECTLY without browser. ⚠️ NOTE: This makes a DIRECT HTTP request like curl or Postman - does NOT require a browser session. Use this for testing APIs directly, sending data to servers, or making HTTP requests. If you need to test HTTP responses TRIGGERED by browser UI actions (form submit, button click, etc.), use `playwright_expect_response` + `playwright_assert_response` instead.",
       inputSchema: z.object({
         url: z.string().describe("URL to perform POST operation"),
         value: z.string().describe("Data to post in the body"),
@@ -182,7 +149,7 @@ export function createToolDefinitions() {
     },
     {
       name: "playwright_put",
-      description: "Perform an HTTP PUT request",
+      description: "Perform an HTTP PUT request DIRECTLY without browser. ⚠️ NOTE: This makes a DIRECT HTTP request like curl or Postman - does NOT require a browser session. Use this for testing APIs directly, updating data on servers, or making HTTP requests. If you need to test HTTP responses TRIGGERED by browser UI actions, use `playwright_expect_response` + `playwright_assert_response` instead.",
       inputSchema: z.object({
         url: z.string().describe("URL to perform PUT operation"),
         value: z.string().describe("Data to PUT in the body")
@@ -190,22 +157,22 @@ export function createToolDefinitions() {
     },
     {
       name: "playwright_patch",
-      description: "Perform an HTTP PATCH request",
+      description: "Perform an HTTP PATCH request DIRECTLY without browser. ⚠️ NOTE: This makes a DIRECT HTTP request like curl or Postman - does NOT require a browser session. Use this for testing APIs directly, partially updating data on servers, or making HTTP requests. If you need to test HTTP responses TRIGGERED by browser UI actions, use `playwright_expect_response` + `playwright_assert_response` instead.",
       inputSchema: z.object({
-        url: z.string().describe("URL to perform PUT operation"),
+        url: z.string().describe("URL to perform PATCH operation"),
         value: z.string().describe("Data to PATCH in the body")
       })
     },
     {
       name: "playwright_delete",
-      description: "Perform an HTTP DELETE request",
+      description: "Perform an HTTP DELETE request DIRECTLY without browser. ⚠️ NOTE: This makes a DIRECT HTTP request like curl or Postman - does NOT require a browser session. Use this for testing APIs directly, deleting data from servers, or making HTTP requests. If you need to test HTTP responses TRIGGERED by browser UI actions, use `playwright_expect_response` + `playwright_assert_response` instead.",
       inputSchema: z.object({
         url: z.string().describe("URL to perform DELETE operation")
       })
     },
     {
       name: "playwright_expect_response",
-      description: "Ask Playwright to start waiting for a HTTP response. This tool initiates the wait operation but does not wait for its completion.",
+      description: "Ask Playwright to start waiting for an HTTP response TRIGGERED BY BROWSER ACTIONS. ⚠️ IMPORTANT: This is DIFFERENT from API tools like `playwright_get`/`playwright_post`. Use this tool to MONITOR/INTERCEPT HTTP responses that are TRIGGERED by user actions in the browser (e.g., clicking a button, submitting a form, loading data via AJAX). You MUST have an active browser session. Workflow: 1) Call this tool BEFORE the action, 2) Perform the user action, 3) Use `playwright_assert_response` to wait and validate the response. Common use cases: testing form submissions, monitoringXHR/Fetch requests, validating SPA API calls triggered by UI interactions, testing async loading states.",
       inputSchema: z.object({
         id: z.string().describe("Unique & arbitrary identifier to be used for retrieving this response later with `Playwright_assert_response`."),
         url: z.string().describe("URL pattern to match in the response.")
@@ -213,7 +180,7 @@ export function createToolDefinitions() {
     },
     {
       name: "playwright_assert_response",
-      description: "Wait for and validate a previously initiated HTTP response wait operation.",
+      description: "Wait for and validate a previously initiated HTTP response MONITOR from browser actions. ⚠️ IMPORTANT: This is DIFFERENT from API tools like `playwright_get`/`playwright_post`. Use this tool ONLY after calling `playwright_expect_response` and performing the browser action that TRIGGERED the HTTP request (e.g., clicking a submit button, filling and submitting a form). This tool waits for the response to arrive from the browser's network stack and optionally validates the response body content. You MUST have an active browser session. Common use cases: validating form submission responses, checking API success/failure status from UI-triggered calls, testing SPA data fetch operations, validating async network requests.",
       inputSchema: z.object({
         id: z.string().describe("Identifier of the HTTP response initially expected using `Playwright_expect_response`."),
         value: z.string().describe("Data to expect in the body of the HTTP response. If provided, the assertion will fail if this value is not found in the response body.").optional()
@@ -221,19 +188,19 @@ export function createToolDefinitions() {
     },
     {
       name: "playwright_custom_user_agent",
-      description: "Set a custom User Agent for the browser",
+      description: "Set a custom User Agent for the browser. Use this to simulate different browsers/devices (e.g., mobile devices, desktop browsers, bots), test responsive layouts, or bypass bot detection. Common use cases: testing mobile view validation, emulating specific browser versions, spoofing user agents for testing purposes.",
       inputSchema: z.object({
         userAgent: z.string().describe("Custom User Agent for the Playwright browser instance")
       })
     },
     {
       name: "playwright_get_visible_text",
-      description: "Get the visible text content of the current page",
+      description: "Get the visible text content of the current page. ⚠️ CRITICAL: ALWAYS use this tool after navigating to a page or performing any action to see the ACTUAL content. NEVER assume or hallucinate about page content - you MUST read the actual page content using this tool. This is your primary way to understand what's on the page. After any `playwright_navigate`, `playwright_click`, `playwright_click_and_switch_tab`, or any action that might change the page content, immediately use this tool to view the updated content.",
       inputSchema: z.object({})
     },
     {
       name: "playwright_get_visible_html",
-      description: "Get the HTML content of the current page. By default, all <script> tags are removed from the output unless removeScripts is explicitly set to false.",
+      description: "Get the HTML content of the current page. By default, all <script> tags are removed from the output unless removeScripts is explicitly set to false. ⚠️ CRITICAL: ALWAYS use this tool after navigating to a page or performing any action to see the ACTUAL HTML structure and content. NEVER assume or hallucinate about page elements, attributes, or structure - you MUST read the actual HTML using this tool. This is essential for understanding page structure, finding correct selectors, and verifying element existence. After any `playwright_navigate`, `playwright_click`, `playwright_click_and_switch_tab`, or any action that might change the page, immediately use this tool to view the updated HTML.",
       inputSchema: z.object({
         selector: z.string().describe("CSS selector to limit the HTML to a specific container").optional(),
         removeScripts: z.boolean().describe("Remove all script tags from the HTML (default: true)").optional().default(true),
@@ -257,7 +224,7 @@ export function createToolDefinitions() {
     },
     {
       name: "playwright_drag",
-      description: "Drag an element to a target location",
+      description: "Drag an element to a target location. Use this for testing drag-and-drop functionality, reordering items, moving elements, or testing interactive UI components that require dragging. Common use cases: list reordering, dashboard widget placement, file drop zones, map markers, carousel interactions, kanban board card movement.",
       inputSchema: z.object({
         sourceSelector: z.string().describe("CSS selector for the element to drag"),
         targetSelector: z.string().describe("CSS selector for the target location")
@@ -265,7 +232,7 @@ export function createToolDefinitions() {
     },
     {
       name: "playwright_press_key",
-      description: "Press a keyboard key",
+      description: "Press a keyboard key. Use this for keyboard navigation, form submission, shortcut testing, text editing, or triggering keyboard-based interactions. Common use cases: submitting forms (Enter), navigation (Arrow keys), combo testing (Ctrl+C, Cmd+V), accessibility testing, keyboard shortcuts validation.",
       inputSchema: z.object({
         key: z.string().describe("Key to press (e.g. 'Enter', 'ArrowDown', 'a')"),
         selector: z.string().describe("Optional CSS selector to focus before pressing key").optional()
@@ -273,7 +240,7 @@ export function createToolDefinitions() {
     },
     {
       name: "playwright_save_as_pdf",
-      description: "Save the current page as a PDF file",
+      description: "Save the current page as a PDF file. Use this for generating PDF reports, preserving page content for documentation, creating printable versions of dynamic content, or archiving page states. Common use cases: reporting automation, invoice generation, certificate creation, content archiving, document export functionality testing.",
       inputSchema: z.object({
         outputPath: z.string().describe("Directory path where PDF will be saved"),
         filename: z.string().describe("Name of the PDF file (default: page.pdf)").optional().default('page.pdf'),
@@ -289,19 +256,52 @@ export function createToolDefinitions() {
     },
     {
       name: "playwright_click_and_switch_tab",
-      description: "Click a link and switch to the newly opened tab",
+      description: "Click a link and switch to the newly opened tab. ⚠️ CRITICAL: After switching to the new tab, ALWAYS use `playwright_get_visible_text` or `playwright_get_visible_html` immediately to view the ACTUAL content of the new page. Never assume what's on the page - you MUST read the content to understand the new context. Use this for testing flows that open new tabs/windows, handling multi-tab interactions, or validating navigation to external pages. Common use cases: testing 'open in new tab' links, modal interactions, pop-up windows, external redirect validation, multi-page workflows.",
       inputSchema: z.object({
         selector: z.string().describe("CSS selector for the link to click")
       })
     },
     {
       name: "playwright_resize",
-      description: "Resize the browser viewport to test responsive layouts without closing and reopening the browser",
+      description: "Resize the browser viewport to test responsive layouts without closing and reopening the browser. Use this for testing how pages behave at different screen sizes, validating mobile/tablet/desktop views, debugging CSS media queries, and responsive design testing. Common use cases: mobile view validation, tablet testing, desktop layout verification, breakpoint testing, responsive UX validation.",
       inputSchema: z.object({
         width: z.number().describe("New viewport width in pixels"),
         height: z.number().describe("New viewport height in pixels")
       })
     },
+    // Codegen tools
+    {
+      name: "start_codegen_session",
+      description: "⚠️ DEVELOPMENT ONLY: Start a new code generation session to record Playwright actions. This tool is strictly for development and testing purposes only. Real-world applications and end users will NEVER use this tool. It should ONLY be used during the development phase to generate test automation code by recording browser interactions.",
+      inputSchema: z.object({
+        options: z.object({
+          outputPath: z.string().describe("Directory path where generated tests will be saved (use absolute path)"),
+          testNamePrefix: z.string().describe("Prefix to use for generated test names (default: 'GeneratedTest')").optional().default('GeneratedTest'),
+          includeComments: z.boolean().describe("Whether to include descriptive comments in generated tests").optional().default(false)
+        }).describe("Code generation options")
+      })
+    },
+    {
+      name: "end_codegen_session",
+      description: "⚠️ DEVELOPMENT ONLY: End a code generation session and generate the test file. This tool is strictly for development and testing purposes only. Real-world applications and end users will NEVER use this tool. It should ONLY be used during the development phase to finalize and generate test automation code from a recorded session.",
+      inputSchema: z.object({
+        sessionId: z.string().describe("ID of the session to end")
+      })
+    },
+    {
+      name: "get_codegen_session",
+      description: "⚠️ DEVELOPMENT ONLY: Get information about a code generation session. This tool is strictly for development and testing purposes only. Real-world applications and end users will NEVER use this tool. It should ONLY be used during the development phase to retrieve recorded actions and session metadata for debugging or reviewing test generation.",
+      inputSchema: z.object({
+        sessionId: z.string().describe("ID of the session to retrieve")
+      })
+    },
+    {
+      name: "clear_codegen_session",
+      description: "⚠️ DEVELOPMENT ONLY: Clear a code generation session without generating a test. This tool is strictly for development and testing purposes only. Real-world applications and end users will NEVER use this tool. It should ONLY be used during the development phase to discard recorded actions and clean up session data when needed.",
+      inputSchema: z.object({
+        sessionId: z.string().describe("ID of the session to clear")
+      })
+    }
   ] as const;
 }
 

@@ -13,7 +13,7 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { randomUUID } from 'crypto';
 import { handleToolCall } from './toolHandler.js';
 
-const statefull: boolean = JSON.parse(process.env.STATEFULL) || false
+const statefull = JSON.parse(process.env.STATEFULL || 'false') || false;
 // Get port from environment variable or use default
 const port = parseInt(process.env.PORT) || 3000;
 
