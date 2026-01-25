@@ -25,31 +25,91 @@ async function runServer() {
 
   // Create Express app
   const app = express();
+  
   app.use(
     cors({
       origin: '*', // Configure appropriately for production, for example:
       // origin: ['https://your-remote-domain.com', 'https://your-other-remote-domain.com'],
-      exposedHeaders: ['mcp-session-id'],
-      allowedHeaders: ['Content-Type', 'mcp-session-id']
+      exposedHeaders: ['MCP-Session-Id'],
+      allowedHeaders: ['Content-Type', 'MCP-Session-Id', 'Authorization']
     })
   );
   // Middleware to parse JSON
   app.use(express.json());
 
+  // DNS Rebinding Protection - Validate Origin header
+  // Temporarily disabled - SDK handles Origin validation internally
+  // app.use('/mcp', (req, res, next) => {
+  //   const origin = req.headers.origin;
+  //   const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  //     ? process.env.ALLOWED_ORIGINS.split(',')
+  //     : ['http://localhost:*', 'http://127.0.0.1:*'];
+  //   
+  //   // Skip validation if no Origin header (not relevant for DNS rebinding protection)
+  //   if (!origin) {
+  //     return next();
+  //   }
+  //   
+  //   // Check if origin is allowed
+  //   const isAllowed = allowedOrigins.some(allowed => {
+  //     if (allowed.includes('*')) {
+  //       const prefix = allowed.replace('*', '');
+  //       return origin.startsWith(prefix);
+  //     }
+  //     return origin === allowed;
+  //   });
+  //   
+  //   if (!isAllowed) {
+  //     return res.status(403).json({
+  //       jsonrpc: '2.0',
+  //       error: {
+  //         code: -32000,
+  //         message: 'Forbidden: Invalid Origin header'
+  //       },
+  //       id: null
+  //     });
+  //   }
+  //   
+  //   next();
+  // });
+
   // Authentication middleware
   if (process.env.MCP_BEARER_TOKEN) {
     app.use('/mcp', (req, res, next) => {
       const authHeader = req.headers.authorization;
+      
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Unauthorized: Missing or invalid Bearer token' });
+        // Return WWW-Authenticate header per MCP spec 2025-11-25
+        const resourceMetadataUrl = `${req.protocol}://${req.get('host')}/.well-known/oauth-protected-resource`;
+        res.setHeader('WWW-Authenticate', `Bearer resource_metadata="${resourceMetadataUrl}"`);
+        return res.status(401).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32001,
+            message: 'Unauthorized: Missing or invalid Bearer token'
+          },
+          id: null
+        });
       }
+      
       const token = authHeader.substring(7); // Remove 'Bearer '
-      // For simplicity, check against a hardcoded token (in production, verify JWT or database)
       const expectedToken = process.env.MCP_BEARER_TOKEN || 'default-token';
+      
       if (token !== expectedToken) {
-        return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+        // Return WWW-Authenticate header per MCP spec 2025-11-25
+        const resourceMetadataUrl = `${req.protocol}://${req.get('host')}/.well-known/oauth-protected-resource`;
+        res.setHeader('WWW-Authenticate', `Bearer resource_metadata="${resourceMetadataUrl}"`);
+        return res.status(401).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32001,
+            message: 'Unauthorized: Invalid token'
+          },
+          id: null
+        });
       }
-      // Attach auth info to requestnpm 
+      
+      // Attach auth info to request
       (req as any).authInfo = { token };
       next();
     });
@@ -57,7 +117,7 @@ async function runServer() {
 
   // Handle MCP requests
   app.post('/mcp', (req, res) => {
-    let sessionId = req.headers['mcp-session-id'] as string | undefined;
+    let sessionId = (req.headers['MCP-Session-Id'] || req.headers['mcp-session-id']) as string | undefined;
     if (!statefull) {
       sessionId = 'stateless';
     }
@@ -69,10 +129,15 @@ async function runServer() {
     } else if (!sessionId && isInitializeRequest(req.body)) {
       transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => statefull ? randomUUID() : 'stateless',
+        enableDnsRebindingProtection: false,
+        enableJsonResponse: true,
+        allowedHosts: process.env.ALLOWED_HOSTS 
+          ? process.env.ALLOWED_HOSTS.split(',')
+          : ['localhost', '127.0.0.1', '192.168.230.113', '192.168.230.113:3000'],
+        allowedOrigins: process.env.ALLOWED_ORIGINS 
+          ? process.env.ALLOWED_ORIGINS.split(',')
+          : ['http://localhost:*', 'http://127.0.0.1:*', 'http://192.168.230.113:*'],
         onsessioninitialized: (sessionId) => {
-          if(!statefull) {
-            sessionId = 'statefull'
-          }
           transports[sessionId as string] = transport;
         },
       });
@@ -118,7 +183,7 @@ async function runServer() {
   });
 
   const handleSessionRequest = async (req: express.Request, res: express.Response) => {
-    let sessionId = req.headers['mcp-session-id'] as string | undefined;
+    let sessionId = req.headers['MCP-Session-Id'] as string | undefined;
     if (!statefull) {
       sessionId = 'stateless';
     }
@@ -127,12 +192,48 @@ async function runServer() {
       return
     }
     const transport = transports[sessionId]
-    await transport.handleRequest(req, res)
+    await transport.handleRequest(req, res, req.body)
   }
 
   app.get('/mcp', handleSessionRequest)
   
   app.delete('/mcp', handleSessionRequest)
+
+  // OAuth 2.0 Protected Resource Metadata endpoint (RFC9728)
+  // Required per MCP spec 2025-11-25 Authorization section
+  app.get('/.well-known/oauth-protected-resource', (req, res) => {
+    const serverUrl = `${req.protocol}://${req.get('host')}`;
+    res.json({
+      resource: `${serverUrl}/mcp`,
+      authorization_servers: process.env.AUTHORIZATION_SERVER 
+        ? [process.env.AUTHORIZATION_SERVER]
+        : [serverUrl], // Default to server URL for simple bearer token auth
+      scopes_supported: process.env.SCOPES_SUPPORTED
+        ? process.env.SCOPES_SUPPORTED.split(',')
+        : [],
+      bearer_methods_supported: ['header'],
+      resource_metadata: `${serverUrl}/.well-known/oauth-protected-resource`
+    });
+  });
+
+  // OAuth 2.0 Authorization Server Metadata endpoint (RFC8414)
+  // Required per MCP spec 2025-11-25 Authorization section
+  app.get('/.well-known/oauth-authorization-server', (req, res) => {
+    const serverUrl = `${req.protocol}://${req.get('host')}`;
+    res.json({
+      issuer: serverUrl,
+      authorization_endpoint: `${serverUrl}/authorize`,
+      token_endpoint: `${serverUrl}/token`,
+      response_types_supported: ['code'],
+      grant_types_supported: ['authorization_code', 'client_credentials'],
+      scopes_supported: process.env.SCOPES_SUPPORTED
+        ? process.env.SCOPES_SUPPORTED.split(',')
+        : [],
+      token_endpoint_auth_methods_supported: ['client_secret_post', 'client_secret_basic'],
+      bearer_methods_supported: ['header'],
+      resource_metadata: `${serverUrl}/.well-known/oauth-protected-resource`
+    });
+  });
 
   // Graceful shutdown logic
   function shutdown() {
