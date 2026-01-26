@@ -36,9 +36,49 @@ export class ConsoleLogsTool extends BrowserToolBase {
       logs = logs.filter(log => log.includes(args.search));
     }
     
-    // Limit the number of logs if specified
+    // Group identical log messages if requested
+    if (args.group) {
+      const logCounts = new Map<string, number>();
+      for (const log of logs) {
+        logCounts.set(log, (logCounts.get(log) || 0) + 1);
+      }
+      logs = Array.from(logCounts.entries()).map(([log, count]) => {
+        if (count > 1) {
+          // Extract type and message from log format "[TYPE] message"
+          const match = log.match(/^\[([^\]]+)\]\s*(.+)$/);
+          if (match) {
+            const [, type, message] = match;
+            return `[${type}] ${message} (x${count})`;
+          }
+        }
+        return log;
+      });
+    }
+    
+    // Limit the number of logs (after grouping)
     if (args.limit && args.limit > 0) {
       logs = logs.slice(-args.limit);
+    }
+    
+    // Truncate long log messages if maxLength is specified
+    if (args.maxLength && args.maxLength > 0) {
+      logs = logs.map(log => {
+        // Check if this is a grouped log with "(xN)" suffix
+        const groupedMatch = log.match(/^(.+)\s+\(x\d+\)$/);
+        if (groupedMatch) {
+          const [, baseLog] = groupedMatch;
+          if (baseLog.length > args.maxLength) {
+            return `${baseLog.substring(0, args.maxLength)}... ${log.match(/\(x\d+\)$/)![0]}`;
+          }
+          return log;
+        }
+        
+        // Regular log truncation
+        if (log.length > args.maxLength) {
+          return `${log.substring(0, args.maxLength)}...`;
+        }
+        return log;
+      });
     }
     
     // Clear logs if requested

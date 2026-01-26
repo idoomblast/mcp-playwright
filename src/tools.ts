@@ -104,7 +104,9 @@ export function createToolDefinitions() {
       inputSchema: z.object({
         type: z.enum(["all", "error", "warning", "log", "info", "debug", "exception"]).describe("Type of logs to retrieve (all, error, warning, log, info, debug, exception)").optional().default('all'),
         search: z.string().describe("Text to search for in logs (handles text with square brackets)").optional(),
-        limit: z.number().describe("Maximum number of logs to return").optional(),
+        limit: z.number().describe("Maximum number of logs to return (default: 50)").optional().default(50),
+        maxLength: z.number().describe("Maximum length for each log message before truncation").optional(),
+        group: z.boolean().describe("Group identical log messages and show a count (default: false)").optional().default(false),
         clear: z.boolean().describe("Whether to clear logs after retrieval (default: false)").optional().default(false)
       })
     },
